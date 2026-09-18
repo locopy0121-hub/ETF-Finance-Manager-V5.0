@@ -11,6 +11,8 @@ import Svg, { Circle, G } from 'react-native-svg';
 import { calculateHoldingView, calculatePortfolioView } from '../engine';
 import { classifyEtf, type EtfCategory } from '../etfResearch';
 import { V3_THEME, resolvePnlTone } from '../theme';
+import { PageFrame, pageFieldEnabled } from '../pageRuntime';
+import { scaledFont } from '../blueprintB';
 import type { ScreenCommon } from '../screensBase';
 
 type PortfolioTab = 'all' | 'tw' | 'us';
@@ -19,6 +21,7 @@ type PortfolioScreenProps = {
   common: ScreenCommon;
   onOpenHolding?: (symbol: string) => void;
   onAdd?: () => void;
+  onSettings?: () => void;
 };
 
 type HoldingRow = {
@@ -110,6 +113,7 @@ export function PortfolioScreen({
   common,
   onOpenHolding,
   onAdd,
+  onSettings,
 }: PortfolioScreenProps) {
   const [tab, setTab] = useState<PortfolioTab>('all');
 
@@ -195,9 +199,14 @@ export function PortfolioScreen({
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.eyebrow}>PORTFOLIO</Text>
-          <Text style={styles.title}>庫存持股</Text>
+          <Text style={[styles.title, { fontSize: scaledFont(24, common.prefs) }]}>庫存持股</Text>
           <Text style={styles.subtitle}>資產配置與持股表現一目了然</Text>
         </View>
+        {onSettings ? (
+          <Pressable onPress={onSettings} style={styles.settingsButton}>
+            <Text style={styles.settingsButtonText}>⚙</Text>
+          </Pressable>
+        ) : null}
         <Pressable
           accessibilityRole="button"
           onPress={onAdd}
@@ -207,6 +216,7 @@ export function PortfolioScreen({
         </Pressable>
       </View>
 
+      <PageFrame prefs={common.prefs} page="portfolio" cardId="portfolio-allocation">
       <View style={styles.allocationCard}>
         <View style={styles.allocationHeader}>
           <View>
@@ -238,6 +248,7 @@ export function PortfolioScreen({
           </View>
         </View>
       </View>
+      </PageFrame>
 
       <View style={styles.segmented}>
         {([
@@ -260,6 +271,7 @@ export function PortfolioScreen({
         })}
       </View>
 
+      <PageFrame prefs={common.prefs} page="portfolio" cardId="portfolio-list">
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>持股清單</Text>
         <Text style={styles.sectionMeta}>{filteredRows.length} 檔</Text>
@@ -294,42 +306,55 @@ export function PortfolioScreen({
                   </View>
                 </View>
 
-                <View style={[styles.pnlBadge, { backgroundColor: tone.background }]}>
-                  <Text style={[styles.pnlValue, { color: tone.foreground }]}>
-                    {privacy
-                      ? '••••'
-                      : `${row.view.cashPnl > 0 ? '+' : ''}${money(row.view.cashPnl)}`}
-                  </Text>
-                  <Text style={[styles.pnlPct, { color: tone.foreground }]}>
-                    {privacy ? '••••' : `${row.view.cashRoi > 0 ? '+' : ''}${row.view.cashRoi.toFixed(2)}%`}
-                  </Text>
-                </View>
+                {common.prefs.visibility.totalPnl && pageFieldEnabled(common.prefs, 'portfolio', 'cashPnl') ? (
+                  <View style={[styles.pnlBadge, { backgroundColor: tone.background }]}>
+                    <Text style={[styles.pnlValue, { color: tone.foreground }]}>
+                      {privacy
+                        ? '••••'
+                        : `${row.view.cashPnl > 0 ? '+' : ''}${money(row.view.cashPnl)}`}
+                    </Text>
+                    {pageFieldEnabled(common.prefs, 'portfolio', 'cashRoi') ? (
+                      <Text style={[styles.pnlPct, { color: tone.foreground }]}>
+                        {privacy ? '••••' : `${row.view.cashRoi > 0 ? '+' : ''}${row.view.cashRoi.toFixed(2)}%`}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
               </View>
 
               <View style={styles.metrics}>
-                <View style={styles.metric}>
-                  <Text style={styles.metricLabel}>現價</Text>
-                  <Text style={styles.metricValue}>{row.view.price.toFixed(2)}</Text>
-                </View>
-                <View style={styles.metric}>
-                  <Text style={styles.metricLabel}>平均成本</Text>
-                  <Text style={styles.metricValue}>{row.view.avgCost.toFixed(2)}</Text>
-                </View>
-                <View style={styles.metric}>
-                  <Text style={styles.metricLabel}>持有股數</Text>
-                  <Text style={styles.metricValue}>{row.view.shares.toLocaleString()}</Text>
-                </View>
-                <View style={[styles.metric, styles.metricRight]}>
-                  <Text style={styles.metricLabel}>當前市值</Text>
-                  <Text style={styles.metricValue}>
-                    {privacy ? '••••' : money(row.view.marketValue)}
-                  </Text>
-                </View>
+                {pageFieldEnabled(common.prefs, 'portfolio', 'price') ? (
+                  <View style={styles.metric}>
+                    <Text style={styles.metricLabel}>現價</Text>
+                    <Text style={styles.metricValue}>{row.view.price.toFixed(2)}</Text>
+                  </View>
+                ) : null}
+                {pageFieldEnabled(common.prefs, 'portfolio', 'avgCost') ? (
+                  <View style={styles.metric}>
+                    <Text style={styles.metricLabel}>平均成本</Text>
+                    <Text style={styles.metricValue}>{row.view.avgCost.toFixed(2)}</Text>
+                  </View>
+                ) : null}
+                {pageFieldEnabled(common.prefs, 'portfolio', 'shares') ? (
+                  <View style={styles.metric}>
+                    <Text style={styles.metricLabel}>持有股數</Text>
+                    <Text style={styles.metricValue}>{row.view.shares.toLocaleString()}</Text>
+                  </View>
+                ) : null}
+                {pageFieldEnabled(common.prefs, 'portfolio', 'marketValue') ? (
+                  <View style={[styles.metric, styles.metricRight]}>
+                    <Text style={styles.metricLabel}>當前市值</Text>
+                    <Text style={styles.metricValue}>
+                      {privacy ? '••••' : money(row.view.marketValue)}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
             </Pressable>
           );
         })}
       </View>
+      </PageFrame>
     </ScrollView>
   );
 }
@@ -345,6 +370,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerText: { flex: 1, minWidth: 0 },
+  settingsButton: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  settingsButtonText: { color: '#0066FF', fontSize: 17 },
   addButton: {
     minHeight: 40,
     borderRadius: 999,
