@@ -19,9 +19,25 @@ export function isGlobalFieldVisible(prefs: V3Preferences, key: string) {
   return true;
 }
 
-export function pageFieldEnabled(prefs: V3Preferences, page: PageFieldKey, key: string) {
-  const selected = prefs.pageCardFields?.[page] ?? [];
-  return selected.includes(key) && isGlobalFieldVisible(prefs, key);
+export function pageFieldsForFrame(
+  prefs: V3Preferences,
+  page: PageFieldKey,
+  cardId?: string,
+) {
+  const card = cardId
+    ? prefs.pageLayouts?.[page]?.cards?.find(item => item.id === cardId)
+    : undefined;
+  const selected = card?.fields ?? prefs.pageCardFields?.[page] ?? [];
+  return selected.filter(key => isGlobalFieldVisible(prefs, key));
+}
+
+export function pageFieldEnabled(
+  prefs: V3Preferences,
+  page: PageFieldKey,
+  key: string,
+  cardId?: string,
+) {
+  return pageFieldsForFrame(prefs, page, cardId).includes(key);
 }
 
 export function pageCardVisible(prefs: V3Preferences, page: PageFieldKey, cardId: string) {
