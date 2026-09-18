@@ -631,8 +631,8 @@ export function PageFrameEditorModal({
       style: {
         ...card.style,
         align: draft.align,
-        radius: draft.radius,
-        backgroundOpacity: draft.opacity,
+        radius: 16,
+        backgroundOpacity: 100,
         fontScale: Math.round((draft.titleFontSize / 16) * 100),
       },
     };
@@ -682,7 +682,7 @@ export function PageFrameEditorModal({
                     setDraft(current => ({ ...current, title }))
                   }
                   placeholder="輸入卡片標題"
-                  placeholderTextColor="rgba(255,255,255,0.28)"
+                  placeholderTextColor="#94A3B8"
                   style={styles.input}
                 />
 
@@ -708,53 +708,12 @@ export function PageFrameEditorModal({
                   }
                 />
 
-                <Text style={styles.fieldLabel}>背景顏色</Text>
-                <TextInput
-                  value={draft.backgroundColor}
-                  onChangeText={backgroundColor =>
-                    setDraft(current => ({
-                      ...current,
-                      backgroundColor,
-                    }))
-                  }
-                  autoCapitalize="characters"
-                  style={styles.input}
-                />
-
-                <View
-                  style={[
-                    styles.colorPreview,
-                    { backgroundColor: draft.backgroundColor },
-                  ]}
-                />
-
-                <SliderControl
-                  label="卡片圓角"
-                  value={draft.radius}
-                  min={0}
-                  max={32}
-                  step={2}
-                  onChange={radius =>
-                    setDraft(current => ({ ...current, radius }))
-                  }
-                  suffix="px"
-                />
-
-                <SliderControl
-                  label="卡片透明度"
-                  value={draft.opacity}
-                  min={50}
-                  max={100}
-                  step={5}
-                  onChange={opacity =>
-                    setDraft(current => ({ ...current, opacity }))
-                  }
-                  suffix="%"
-                />
-
                 <View style={styles.defaultHint}>
                   <Text style={styles.defaultHintText}>
-                    Page Frame Editor 2.0 預設：圓角 16px · 透明度 95%
+                    Blueprint B 固定卡片外觀：白色 #FFFFFF · 圓角 16px · 不透明 100% · 邊框 #E2E8F0。
+                  </Text>
+                  <Text style={styles.defaultHintText}>
+                    此處只編輯標題、對齊、欄位、排序與效果；不再提供無效的背景色、圓角或透明度覆寫。
                   </Text>
                 </View>
               </>
