@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { calculateHoldingView } from '../engine';
 import { pageFieldsForFrame, PageFrame } from '../pageRuntime';
 import { V3_THEME, resolvePnlTone } from '../theme';
-import { scaledFont } from '../blueprintB';
+import FontScaleScope from '../components/FontScaleScope';
 import type { ScreenCommon } from '../screensBase';
 
 type HoldingDetailScreenProps = {
@@ -95,12 +95,13 @@ export function HoldingDetailScreen({
   const tone = resolvePnlTone(view.cashPnl, 'TW');
 
   return (
+    <FontScaleScope prefs={common.prefs}>
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.circleButton}><Text style={styles.circleText}>‹</Text></Pressable>
         <View style={{ flex: 1 }}>
           <Text style={styles.eyebrow}>ETF DETAIL</Text>
-          <Text style={[styles.title, { fontSize: scaledFont(24, common.prefs) }]}>{holding.symbol} {holding.name}</Text>
+          <Text style={styles.title}>{holding.symbol} {holding.name}</Text>
           <Text style={styles.subtitle}>單檔持有、行情、成本與損益詳情</Text>
         </View>
         {common.prefs.ai.enabled && common.prefs.ai.showHeaderButton && common.onAi ? (
@@ -129,6 +130,7 @@ export function HoldingDetailScreen({
         </View>
       </PageFrame>
     </ScrollView>
+    </FontScaleScope>
   );
 }
 
