@@ -13,10 +13,12 @@ import NetInfo from '@react-native-community/netinfo';
 import { researchEtf } from '../../services/aiResearch';
 import { fetchTwseDividend } from '../../services/twseDividends';
 import type { ScreenCommon } from '../screensBase';
+import { PageFrame } from '../pageRuntime';
+import { scaledFont } from '../blueprintB';
 
 type SourceLink = { label: string; url?: string };
 type ChatMessage = { id: string; role: 'user' | 'assistant'; text: string; sources: SourceLink[] };
-type AIScreenProps = { common: ScreenCommon };
+type AIScreenProps = { common: ScreenCommon; onSettings?: () => void };
 
 const QUICK_PROMPTS = [
   '0050 最新配息與除息日',
@@ -51,7 +53,9 @@ const researchAnswer = (
     '\n\n' + (body || '目前沒有取得足夠的即時公開資訊。');
 };
 
-export function AIScreen({ common }: AIScreenProps) {
+export function AIScreen({ common, onSettings }: AIScreenProps) {
+  const aiPrefs = common.prefs.ai;
+  const fontScale = Math.max(0.8, Math.min(1.8, aiPrefs.fontScale / 100));
   const scrollRef = useRef<ScrollView>(null);
   const [connected, setConnected] = useState<boolean | null>(null);
   const [text, setText] = useState('');
@@ -163,19 +167,41 @@ export function AIScreen({ common }: AIScreenProps) {
     setText('');
   };
 
+  if (!aiPrefs.enabled) {
+    return (
+      <View style={styles.screen}>
+        <View style={styles.disabledCard}>
+          <Text style={[styles.title, { fontSize: scaledFont(24, common.prefs) }]}>AI 助理已停用</Text>
+          <Text style={styles.subtitle}>可至設定中心 → 系統與 AI 重新啟用。</Text>
+          {onSettings ? (
+            <Pressable onPress={onSettings} style={styles.sendButton}>
+              <Text style={styles.sendButtonText}>開啟設定</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.eyebrow}>AI RESEARCH</Text>
-          <Text style={styles.title}>AI 助理</Text>
+          <Text style={[styles.title, { fontSize: scaledFont(24, common.prefs) }]}>AI 助理</Text>
           <Text style={styles.subtitle}>公開資訊、新聞、總經與除權息即時查詢</Text>
         </View>
+        {onSettings ? (
+          <Pressable onPress={onSettings} style={styles.clearButton}>
+            <Text style={styles.clearButtonText}>⚙ 設定</Text>
+          </Pressable>
+        ) : null}
         <Pressable onPress={clearConversation} style={styles.clearButton}>
           <Text style={styles.clearButtonText}>清空對話</Text>
         </Pressable>
       </View>
 
+      <PageFrame prefs={common.prefs} page="ai" cardId="ai-main" style={{ flex: 1 }}>
       <View style={[styles.networkBadge, connected === false && styles.networkBadgeOffline]}>
         <Text style={[styles.networkBadgeText, connected === false && styles.networkBadgeTextOffline]}>
           {networkLabel}
@@ -185,7 +211,7 @@ export function AIScreen({ common }: AIScreenProps) {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickRow}>
         {QUICK_PROMPTS.map(prompt => (
           <Pressable key={prompt} onPress={() => void submit(prompt)} style={styles.quickPrompt}>
-            <Text style={styles.quickPromptText}>{prompt}</Text>
+            <Text style={[styles.quickPromptText, { fontSize: 9 * fontScale }]}>{prompt}</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -202,7 +228,7 @@ export function AIScreen({ common }: AIScreenProps) {
             key={message.id}
             style={[styles.bubble, message.role === 'user' ? styles.userBubble : styles.assistantBubble]}
           >
-            <Text style={[styles.bubbleText, message.role === 'user' && styles.userBubbleText]}>
+            <Text style={[styles.bubbleText, { fontSize: 11 * fontScale, lineHeight: 18 * fontScale }, message.role === 'user' && styles.userBubbleText]}>
               {message.text}
             </Text>
             {message.role === 'assistant' && message.sources.length ? (
@@ -238,7 +264,7 @@ export function AIScreen({ common }: AIScreenProps) {
           placeholder="查詢 ETF、個股、總經事件或除權息…"
           placeholderTextColor="#94A3B8"
           returnKeyType="send"
-          style={styles.input}
+          style={[styles.input, { fontSize: 11 * fontScale }]}
         />
         <Pressable
           disabled={loading}
@@ -248,6 +274,7 @@ export function AIScreen({ common }: AIScreenProps) {
           <Text style={styles.sendButtonText}>{loading ? '查詢中' : '送出'}</Text>
         </Pressable>
       </View>
+      </PageFrame>
     </View>
   );
 }
@@ -261,6 +288,7 @@ const styles = StyleSheet.create({
   subtitle: { marginTop: 5, color: '#64748B', fontSize: 11, lineHeight: 17 },
   clearButton: { minHeight: 40, borderRadius: 999, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center' },
   clearButtonText: { color: '#0066FF', fontSize: 10, fontWeight: '900' },
+  disabledCard: { marginTop: 20, borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', padding: 18 },
   networkBadge: { alignSelf: 'flex-start', marginTop: 14, borderRadius: 999, backgroundColor: '#ECFDF5', paddingHorizontal: 11, paddingVertical: 7 },
   networkBadgeOffline: { backgroundColor: '#FEF2F2' },
   networkBadgeText: { color: '#059669', fontSize: 10, fontWeight: '900' },
