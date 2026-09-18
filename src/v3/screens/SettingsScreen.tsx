@@ -13,12 +13,14 @@ import {
 } from 'react-native';
 
 import type {
-  PageFieldKey,
   V3CardAlign,
   V3PageCard,
   V3Preferences,
   ThemeId,
 } from '../model';
+import { PAGE_REGISTRY, type PageFieldKey } from '../pageRegistry';
+import { normalizeGridMonitor } from '../monitoring';
+import { PageFrame } from '../pageRuntime';
 import {
   EFFECT_KINDS,
   effectDefaults,
@@ -1253,11 +1255,10 @@ export function SettingsScreen({
     onChange({
       monitoring: {
         ...prefs.monitoring,
-        gridMonitor: {
-          ...prefs.monitoring.gridMonitor,
-          ...patch,
-          columns: 2,
-        },
+        gridMonitor: normalizeGridMonitor(
+          prefs.monitoring.gridMonitor,
+          patch,
+        ),
       },
     });
   };
@@ -1405,6 +1406,7 @@ export function SettingsScreen({
         </Text>
       </View>
 
+      <PageFrame prefs={prefs} page="settings" cardId="settings-main">
       <View style={styles.toolboxList}>
         {TOOLBOX_GROUPS.map(group => (
           <AccordionCard
@@ -1468,18 +1470,27 @@ export function SettingsScreen({
                     })
                   }
                 />
+                <SettingToggle
+                  label="首頁跑馬燈"
+                  value={prefs.visibility.smartTicker}
+                  onChange={smartTicker =>
+                    onChange({
+                      visibility: { ...prefs.visibility, smartTicker },
+                    })
+                  }
+                />
 
                 <Text style={styles.groupTitle}>各頁面設定模式</Text>
                 <View style={styles.choiceWrap}>
-                  {(Object.keys(prefs.monitoring.pageCustomize) as PageFieldKey[]).map(page => (
+                  {PAGE_REGISTRY.map(({ key, label }) => (
                     <ChoicePill
-                      key={page}
-                      active={!!prefs.monitoring.pageCustomize[page]}
-                      label={page}
+                      key={key}
+                      active={!!prefs.monitoring.pageCustomize[key]}
+                      label={label}
                       onPress={() =>
                         patchPageCustomize(
-                          page,
-                          !prefs.monitoring.pageCustomize[page],
+                          key,
+                          !prefs.monitoring.pageCustomize[key],
                         )
                       }
                     />
@@ -1492,16 +1503,7 @@ export function SettingsScreen({
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.pageSelector}
                 >
-                  {(
-                    [
-                      ['dashboard', '首頁'],
-                      ['ledger', '記帳'],
-                      ['portfolio', '庫存'],
-                      ['dividend', '股息'],
-                      ['calculator', '試算'],
-                      ['detail', 'ETF 詳情'],
-                    ] as const
-                  ).map(([key, label]) => (
+                  {PAGE_REGISTRY.map(({ key, label }) => (
                     <ChoicePill
                       key={key}
                       active={selectedPage === key}
@@ -1736,36 +1738,16 @@ export function SettingsScreen({
 
             {group.key === 'visual' ? (
               <>
-                <Text style={styles.groupTitle}>佈景主題</Text>
-                <View style={styles.choiceWrap}>
-                  {THEME_CHOICES.map(([id, label]) => (
-                    <ChoicePill
-                      key={id}
-                      active={prefs.themeId === id}
-                      label={label}
-                      onPress={() => onChange({ themeId: id })}
-                    />
-                  ))}
+                <Text style={styles.groupTitle}>V5 Blueprint B 固定視覺</Text>
+                <View style={styles.blueprintLockCard}>
+                  <Text style={styles.blueprintLockTitle}>專業明亮儀表板</Text>
+                  <Text style={styles.helperText}>
+                    背景 #F8FAFC · 卡片 #FFFFFF · 圓角 16px · 主色 #0066FF · 紅漲 #EF4444 · 綠跌 #10B981
+                  </Text>
+                  <Text style={styles.helperText}>
+                    固定色票不再由 Theme / 卡片透明度覆蓋；字體、版面、顯示、監控、日曆與動態設定仍可即時調整。
+                  </Text>
                 </View>
-
-                <InlineNumber
-                  label="全局卡片透明度"
-                  value={prefs.cardOpacity}
-                  min={35}
-                  max={100}
-                  step={5}
-                  suffix="%"
-                  onChange={cardOpacity => onChange({ cardOpacity })}
-                />
-                <InlineNumber
-                  label="全局卡片圓角"
-                  value={prefs.cardRadius}
-                  min={0}
-                  max={32}
-                  step={2}
-                  suffix="px"
-                  onChange={cardRadius => onChange({ cardRadius })}
-                />
                 <InlineNumber
                   label="全局字體"
                   value={prefs.fontScale}
@@ -1776,25 +1758,106 @@ export function SettingsScreen({
                   onChange={fontScale => onChange({ fontScale })}
                 />
 
-                <Text style={styles.groupTitle}>頁面 / 卡片背景</Text>
-                <View style={styles.actionWrap}>
-                  <SmallAction
-                    label="選擇頁面背景"
-                    onPress={() => {
-                      void Promise.resolve(onPickImage()).then(uri => {
-                        if (uri) onChange({ backgroundPreset: 'custom', backgroundImageUri: uri });
-                      });
-                    }}
-                  />
-                  <SmallAction
-                    label="選擇卡片背景"
-                    onPress={() => {
-                      void Promise.resolve(onPickCardImage()).then(uri => {
-                        if (uri) onChange({ cardBackgroundImageUri: uri });
-                      });
-                    }}
-                  />
-                  <SmallAction label="清除卡片背景" onPress={onClearCardImage} />
+                <Text style={styles.groupTitle}>股息月曆</Text>
+                <SettingToggle
+                  label="顯示月曆格線"
+                  value={prefs.calendar.grid}
+                  onChange={grid =>
+                    onChange({ calendar: { ...prefs.calendar, grid } })
+                  }
+                />
+                <SettingToggle
+                  label="週末強調"
+                  value={prefs.calendar.weekendEmphasis}
+                  onChange={weekendEmphasis =>
+                    onChange({
+                      calendar: { ...prefs.calendar, weekendEmphasis },
+                    })
+                  }
+                />
+                <InlineNumber
+                  label="月曆格圓角"
+                  value={prefs.calendar.cellRadius}
+                  min={0}
+                  max={24}
+                  step={2}
+                  suffix="px"
+                  onChange={cellRadius =>
+                    onChange({
+                      calendar: { ...prefs.calendar, cellRadius },
+                    })
+                  }
+                />
+                <InlineNumber
+                  label="月曆格高度"
+                  value={prefs.calendar.cellHeight}
+                  min={42}
+                  max={84}
+                  step={2}
+                  suffix="px"
+                  onChange={cellHeight =>
+                    onChange({
+                      calendar: { ...prefs.calendar, cellHeight },
+                    })
+                  }
+                />
+                <InlineNumber
+                  label="月曆字體"
+                  value={prefs.calendar.fontScale}
+                  min={80}
+                  max={160}
+                  step={5}
+                  suffix="%"
+                  onChange={fontScale =>
+                    onChange({
+                      calendar: { ...prefs.calendar, fontScale },
+                    })
+                  }
+                />
+                <Text style={styles.helperText}>事件標記</Text>
+                <View style={styles.choiceWrap}>
+                  {(['dot','underline','block'] as const).map(key => (
+                    <ChoicePill
+                      key={key}
+                      active={prefs.calendar.eventStyle === key}
+                      label={key === 'dot' ? '圓點' : key === 'underline' ? '底線' : '色塊'}
+                      onPress={() =>
+                        onChange({
+                          calendar: { ...prefs.calendar, eventStyle: key },
+                        })
+                      }
+                    />
+                  ))}
+                </View>
+                <Text style={styles.helperText}>今日樣式</Text>
+                <View style={styles.choiceWrap}>
+                  {(['outline','fill','glow'] as const).map(key => (
+                    <ChoicePill
+                      key={key}
+                      active={prefs.calendar.todayStyle === key}
+                      label={key === 'outline' ? '外框' : key === 'fill' ? '填色' : '光暈'}
+                      onPress={() =>
+                        onChange({
+                          calendar: { ...prefs.calendar, todayStyle: key },
+                        })
+                      }
+                    />
+                  ))}
+                </View>
+                <Text style={styles.helperText}>選取樣式</Text>
+                <View style={styles.choiceWrap}>
+                  {(['outline','fill'] as const).map(key => (
+                    <ChoicePill
+                      key={key}
+                      active={prefs.calendar.selectedStyle === key}
+                      label={key === 'outline' ? '外框' : '填色'}
+                      onPress={() =>
+                        onChange({
+                          calendar: { ...prefs.calendar, selectedStyle: key },
+                        })
+                      }
+                    />
+                  ))}
                 </View>
 
                 <Text style={styles.groupTitle}>圖表互動</Text>
@@ -1887,6 +1950,20 @@ export function SettingsScreen({
                   value={prefs.ai.showHeaderButton}
                   onChange={showHeaderButton =>
                     onChange({ ai: { ...prefs.ai, showHeaderButton } })
+                  }
+                />
+                <SettingToggle
+                  label="AI 寫入前確認"
+                  value={prefs.ai.confirmWrites}
+                  onChange={confirmWrites =>
+                    onChange({ ai: { ...prefs.ai, confirmWrites } })
+                  }
+                />
+                <SettingToggle
+                  label="啟用本機語意解析"
+                  value={prefs.ai.localParser}
+                  onChange={localParser =>
+                    onChange({ ai: { ...prefs.ai, localParser } })
                   }
                 />
                 <InlineNumber
@@ -2194,6 +2271,7 @@ export function SettingsScreen({
           </AccordionCard>
         ))}
       </View>
+      </PageFrame>
 
       <PageFrameEditorModal
         visible={!!editingCard}
@@ -2894,6 +2972,19 @@ const styles = StyleSheet.create({
     color: V3_THEME.colors.textPrimary,
     fontSize: 13,
     fontWeight: '800',
+  },
+  blueprintLockCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    padding: 14,
+    gap: 6,
+  },
+  blueprintLockTitle: {
+    color: '#0066FF',
+    fontSize: 13,
+    fontWeight: '900',
   },
   helperText: {
     color: V3_THEME.colors.textSecondary,
