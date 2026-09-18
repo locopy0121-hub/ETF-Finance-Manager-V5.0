@@ -9,7 +9,7 @@ import {
 
 import { calculateDividendView } from '../engine';
 import { PageFrame, PageFrameStack, pageFieldEnabled } from '../pageRuntime';
-import { scaledFont } from '../blueprintB';
+import FontScaleScope from '../components/FontScaleScope';
 import type { ScreenCommon } from '../screensBase';
 
 type DividendScreenProps = {
@@ -208,6 +208,7 @@ export function DividendScreen({
   };
 
   return (
+    <FontScaleScope prefs={common.prefs}>
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
@@ -216,7 +217,7 @@ export function DividendScreen({
       <View style={styles.headerRow}>
         <View style={styles.header}>
           <Text style={styles.eyebrow}>DIVIDEND TRACKER</Text>
-          <Text style={[styles.title, { fontSize: scaledFont(24, common.prefs) }]}>股息月曆</Text>
+          <Text style={styles.title}>股息月曆</Text>
           <Text style={styles.subtitle}>
             以月曆查看除息日、領息日與當日配息明細
           </Text>
@@ -621,6 +622,7 @@ export function DividendScreen({
       </PageFrame>
       </PageFrameStack>
     </ScrollView>
+    </FontScaleScope>
   );
 }
 
