@@ -103,6 +103,9 @@ export function HoldingDetailScreen({
           <Text style={[styles.title, { fontSize: scaledFont(24, common.prefs) }]}>{holding.symbol} {holding.name}</Text>
           <Text style={styles.subtitle}>單檔持有、行情、成本與損益詳情</Text>
         </View>
+        {common.prefs.ai.enabled && common.prefs.ai.showHeaderButton && common.onAi ? (
+          <Pressable onPress={common.onAi} style={styles.circleButton}><Text style={styles.circleText}>✦</Text></Pressable>
+        ) : null}
         <Pressable onPress={onSettings} style={styles.circleButton}><Text style={styles.circleText}>⚙</Text></Pressable>
       </View>
 
