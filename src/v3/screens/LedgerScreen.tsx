@@ -14,7 +14,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import type { TradeMode } from '../../types/etf';
 import type { CashReconciliation, LedgerEntry } from '../model';
 import type { ScreenCommon } from '../screensBase';
-import { calculateTradePreview } from '../engine';
+import { calculatePortfolioView, calculateTradePreview } from '../engine';
 import { preciseTradeAmount } from '../financeFormat';
 import {
   normalizeBrokerProfiles,
@@ -22,6 +22,8 @@ import {
 } from '../../data/brokerProfiles';
 import { useEtfCatalog } from '../../services/useEtfCatalog';
 import { searchEtfCatalog } from '../../services/etfCatalog';
+import { PageFrame, pageFieldEnabled } from '../pageRuntime';
+import { scaledFont } from '../blueprintB';
 
 type LedgerKind = 'buy' | 'sell' | 'dividend' | 'other';
 
@@ -147,6 +149,7 @@ export function LedgerScreen({
   onCash,
   onDividend,
   onDeleteLedger,
+  onSettings,
 }: LedgerScreenProps) {
   const { catalog } = useEtfCatalog();
   const scrollRef = useRef<ScrollView>(null);
@@ -173,6 +176,33 @@ export function LedgerScreen({
   const [cashNote, setCashNote] = useState('');
   const [tradeNote, setTradeNote] = useState('');
   const [showAllRecords, setShowAllRecords] = useState(false);
+
+  const portfolioSummary = useMemo(
+    () =>
+      calculatePortfolioView(
+        common.holdings,
+        common.quotes,
+        common.cashBalance,
+        common.ledger,
+        common.dividends,
+      ),
+    [
+      common.holdings,
+      common.quotes,
+      common.cashBalance,
+      common.ledger,
+      common.dividends,
+    ],
+  );
+
+  const summaryItems = [
+    ['cashBalance', '現金部位', money(common.cashBalance)],
+    ['historicalTradeCost', '累積成交成本', money(portfolioSummary.historicalTradeCost)],
+    ['historicalBuyFees', '累積買進手續費', money(portfolioSummary.historicalBuyFees)],
+    ['historicalCashOutflow', '累積現金支出', money(portfolioSummary.historicalCashOutflow)],
+    ['realizedPnl', '已實現含費損益', money(portfolioSummary.realizedCashPnl)],
+    ['ledgerCount', '帳務筆數', String(common.ledger.length) + ' 筆'],
+  ] as const;
 
   const selectedBroker = resolveBrokerProfile(
     brokerProfileId,
@@ -352,11 +382,15 @@ export function LedgerScreen({
       <View style={styles.headerRow}>
         <View style={styles.headerText}>
           <Text style={styles.eyebrow}>SMART LEDGER</Text>
-          <Text style={styles.title}>智慧記帳</Text>
+          <Text style={[styles.title, { fontSize: scaledFont(24, common.prefs) }]}>智慧記帳</Text>
           <Text style={styles.subtitle}>
             交易、股息與資金異動統一寫入既有帳務資料鏈
           </Text>
         </View>
+
+        <Pressable onPress={onSettings} style={styles.settingsButton}>
+          <Text style={styles.settingsButtonText}>⚙</Text>
+        </Pressable>
 
         <Pressable
           accessibilityRole="button"
@@ -366,6 +400,19 @@ export function LedgerScreen({
           <Text style={styles.historyShortcutText}>記帳紀錄</Text>
         </Pressable>
       </View>
+
+      <PageFrame prefs={common.prefs} page="ledger" cardId="ledger-summary">
+        <View style={styles.summaryGrid}>
+          {summaryItems
+            .filter(([key]) => pageFieldEnabled(common.prefs, 'ledger', key))
+            .map(([key, label, value]) => (
+              <View key={key} style={styles.summaryMetric}>
+                <Text style={styles.summaryMetricLabel}>{label}</Text>
+                <Text style={styles.summaryMetricValue}>{value}</Text>
+              </View>
+            ))}
+        </View>
+      </PageFrame>
 
       <View style={styles.segmented}>
         {([
@@ -398,6 +445,7 @@ export function LedgerScreen({
         })}
       </View>
 
+      <PageFrame prefs={common.prefs} page="ledger" cardId="ledger-form">
       <View style={styles.formCard}>
         <View style={styles.formHeader}>
           <View>
@@ -668,7 +716,9 @@ export function LedgerScreen({
           <Text style={styles.primaryButtonText}>新增交易紀錄</Text>
         </Pressable>
       </View>
+      </PageFrame>
 
+      <PageFrame prefs={common.prefs} page="ledger" cardId="ledger-records">
       <View style={styles.sectionHeader}>
         <View>
           <Text style={styles.sectionTitle}>最近紀錄</Text>
@@ -766,6 +816,7 @@ export function LedgerScreen({
           </View>
         )}
       </View>
+      </PageFrame>
     </ScrollView>
   );
 }
@@ -811,6 +862,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 17,
   },
+  settingsButton: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  settingsButtonText: { color: '#0066FF', fontSize: 17 },
+  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginBottom: 14 },
+  summaryMetric: { width: '48.5%', minHeight: 70, borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', padding: 12 },
+  summaryMetricLabel: { color: '#64748B', fontSize: 9, fontWeight: '700' },
+  summaryMetricValue: { marginTop: 6, color: '#0F172A', fontSize: 13, fontWeight: '900' },
   historyShortcut: {
     minHeight: 40,
     borderRadius: 999,
