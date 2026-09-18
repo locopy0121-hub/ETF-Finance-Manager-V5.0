@@ -50,9 +50,9 @@ export function MarketScreen({ common, onSettings, onOpenHolding }: MarketScreen
     [symbols.join('|'), holdings, quotes, ledger, dividends],
   );
 
-  const showPrice = pageFieldEnabled(prefs, 'market', 'price');
-  const showChange = pageFieldEnabled(prefs, 'market', 'changePct');
-  const showVolume = pageFieldEnabled(prefs, 'market', 'volume');
+  const showPrice = pageFieldEnabled(prefs, 'market', 'price', 'market-main');
+  const showChange = pageFieldEnabled(prefs, 'market', 'changePct', 'market-main');
+  const showVolume = pageFieldEnabled(prefs, 'market', 'volume', 'market-main');
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
