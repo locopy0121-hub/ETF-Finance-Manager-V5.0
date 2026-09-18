@@ -1,4 +1,4 @@
-name: V5.0.0 Huanan Core Final APK
+name: V5.0.0 Blueprint B Final APK
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: v5.0.0-huanan-core-final
+  group: v5.0.0-blueprint-b-final
   cancel-in-progress: true
 
 env:
@@ -66,8 +66,8 @@ jobs:
           grep -F 'APP_BUILD=47' src/v3/version.ts
           grep -F '"version": "5.0.0"' app.json
           grep -F '"runtimeVersion": "5.0.0"' app.json
-          grep -F '"versionCode": 47' app.json
-          grep -F 'versionCode 47' android/app/build.gradle
+          grep -F '"versionCode": 50000' app.json
+          grep -F 'versionCode 50000' android/app/build.gradle
           grep -F 'versionName "5.0.0"' android/app/build.gradle
           grep -F '<string name="app_name">ETF財務管家 V5.0.0 NATIVE</string>' android/app/src/main/res/values/strings.xml
           grep -F '<string name="expo_runtime_version">5.0.0</string>' android/app/src/main/res/values/strings.xml
@@ -133,13 +133,13 @@ jobs:
             --local \
             --non-interactive \
             --freeze-credentials \
-            --output "$PWD/artifacts/ETF-Finance-Manager-V5.0.0-HUANAN-Core-Final-ARM64.apk"
+            --output "$PWD/artifacts/ETF-Finance-Manager-V5.0.0-BlueprintB-Final-ARM64.apk"
 
       - name: Verify signed APK and package metadata
         shell: bash
         run: |
           set -euo pipefail
-          OUT='artifacts/ETF-Finance-Manager-V5.0.0-HUANAN-Core-Final-ARM64.apk'
+          OUT='artifacts/ETF-Finance-Manager-V5.0.0-BlueprintB-Final-ARM64.apk'
           test -s "$OUT"
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)"
           AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)"
@@ -147,15 +147,15 @@ jobs:
           "$AAPT" dump badging "$OUT" | grep -E "^package:|^application-label:" | tee artifacts/APK_BADGING.txt
           grep -F "name='com.etfpilot.twselive'" artifacts/APK_BADGING.txt
           grep -F "versionName='5.0.0'" artifacts/APK_BADGING.txt
-          grep -F "versionCode='47'" artifacts/APK_BADGING.txt
+          grep -F "versionCode='50000'" artifacts/APK_BADGING.txt
           sha256sum "$OUT" | tee artifacts/SHA256.txt
           stat -c 'apk_size_bytes=%s' "$OUT" | tee artifacts/BUILD_INFO.txt
           {
             echo 'source_commit='$(git rev-parse HEAD)
             echo 'package=com.etfpilot.twselive'
             echo 'versionName=5.0.0'
-            echo 'versionCode=47'
-            echo 'tag=v5.0.0-huanan-core-final'
+            echo 'versionCode=50000'
+            echo 'tag=v5.0.0-blueprint-b-final'
             echo 'finance_core=src/utils/etfCalculators.ts'
             echo 'architecture=arm64-v8a'
           } >> artifacts/BUILD_INFO.txt
@@ -164,7 +164,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          TAG='v5.0.0-huanan-core-final'
+          TAG='v5.0.0-blueprint-b-final'
           CURRENT="$(git rev-parse HEAD)"
           git fetch --tags --force
           git config user.name 'github-actions[bot]'
@@ -172,20 +172,20 @@ jobs:
           if git rev-parse "$TAG" >/dev/null 2>&1; then
             EXISTING="$(git rev-list -n 1 "$TAG")"
             if [ "$EXISTING" != "$CURRENT" ]; then
-              git tag -fa "$TAG" HEAD -m 'ETF財務管家 V5.0.0 Huanan Core Final'
+              git tag -fa "$TAG" HEAD -m 'ETF財務管家 V5.0.0 Blueprint B Final'
               git push --force origin "refs/tags/$TAG"
             else
               echo "Tag already exists at release commit: $CURRENT"
             fi
           else
-            git tag -a "$TAG" HEAD -m 'ETF財務管家 V5.0.0 Huanan Core Final'
+            git tag -a "$TAG" HEAD -m 'ETF財務管家 V5.0.0 Blueprint B Final'
             git push origin "$TAG"
           fi
 
       - name: Upload V5.0.0 signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: ETF-Finance-Manager-V5.0.0-HUANAN-Core-Final-ARM64
+          name: ETF-Finance-Manager-V5.0.0-BlueprintB-Final-ARM64
           path: artifacts/
           if-no-files-found: error
           retention-days: 14
@@ -200,9 +200,9 @@ jobs:
             echo "status=${{ job.status }}"
             echo "run_id=$GITHUB_RUN_ID"
             echo "source_commit=$GITHUB_SHA"
-            echo "artifact_name=ETF-Finance-Manager-V5.0.0-HUANAN-Core-Final-ARM64"
+            echo "artifact_name=ETF-Finance-Manager-V5.0.0-BlueprintB-Final-ARM64"
             echo "versionName=5.0.0"
-            echo "versionCode=47"
+            echo "versionCode=50000"
           } > .build-results/latest-apk.txt
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
