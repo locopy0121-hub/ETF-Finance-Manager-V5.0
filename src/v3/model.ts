@@ -260,7 +260,7 @@ export function makeDefaultPageLayouts(homeCards:HomeMetricKey[][]=[['totalAsset
   ledger:{columns:6,cards:[card('ledger-summary','智慧記帳摘要',pageFields.ledger??[],0,0,6,2),{...card('ledger-form','記帳表單',[],0,2,6,4),role:'module'},{...card('ledger-records','最近帳務紀錄',[],0,6,6,3),role:'module'}]},
   portfolio:{columns:6,cards:[{...card('portfolio-allocation','ETF 市值配置',[],0,0,6,2),role:'module'},{...card('portfolio-list','庫存清單模板',pageFields.portfolio??[],0,2,6,3),role:'listTemplate'}]},
   dividend:{columns:6,cards:[card('dividend-summary','股息摘要',pageFields.dividend??[],0,0,6,2),{...card('dividend-calendar','股息月曆',[],0,2,6,4),role:'module'},{...card('dividend-events','股息事件明細',[],0,6,6,3),role:'module'}]},
-  calculator:{columns:6,cards:[card('calculator-summary','試算摘要',pageFields.calculator??[],0,0,6,2)]},
+  calculator:{columns:6,cards:[{...card('calculator-source','試算起點與組合',[],0,0,6,3),role:'module'},card('calculator-summary','試算摘要',pageFields.calculator??[],0,3,6,2),{...card('calculator-parameters','模擬參數',[],0,5,6,3),role:'module'},{...card('calculator-chart','資產成長圖表',[],0,8,6,3),role:'module'},{...card('calculator-detail','年月成長明細',[],0,11,6,4),role:'module'},{...card('calculator-plans','我的存股計畫',[],0,15,6,3),role:'module'}]},
   market:{columns:6,cards:[card('market-main','市場總覽',pageFields.market??[],0,0,6,2)]},
   ai:{columns:6,cards:[{...card('ai-main','AI 助理',pageFields.ai??[],0,0,6,2),role:'module'}]},
   settings:{columns:6,cards:[{...card('settings-main','設定中心',pageFields.settings??[],0,0,6,2),role:'module'}]},
