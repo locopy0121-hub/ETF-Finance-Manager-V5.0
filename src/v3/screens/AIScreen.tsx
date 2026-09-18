@@ -14,7 +14,7 @@ import { researchEtf } from '../../services/aiResearch';
 import { fetchTwseDividend } from '../../services/twseDividends';
 import type { ScreenCommon } from '../screensBase';
 import { PageFrame } from '../pageRuntime';
-import { scaledFont } from '../blueprintB';
+import FontScaleScope from '../components/FontScaleScope';
 
 type SourceLink = { label: string; url?: string };
 type ChatMessage = { id: string; role: 'user' | 'assistant'; text: string; sources: SourceLink[] };
@@ -55,7 +55,7 @@ const researchAnswer = (
 
 export function AIScreen({ common, onSettings }: AIScreenProps) {
   const aiPrefs = common.prefs.ai;
-  const fontScale = Math.max(0.8, Math.min(1.8, aiPrefs.fontScale / 100));
+  const effectiveFontPercent = common.prefs.fontScale * aiPrefs.fontScale / 100;
   const scrollRef = useRef<ScrollView>(null);
   const [connected, setConnected] = useState<boolean | null>(null);
   const [text, setText] = useState('');
@@ -169,9 +169,10 @@ export function AIScreen({ common, onSettings }: AIScreenProps) {
 
   if (!aiPrefs.enabled) {
     return (
+      <FontScaleScope prefs={common.prefs} percent={effectiveFontPercent}>
       <View style={styles.screen}>
         <View style={styles.disabledCard}>
-          <Text style={[styles.title, { fontSize: scaledFont(24, common.prefs) }]}>AI 助理已停用</Text>
+          <Text style={styles.title}>AI 助理已停用</Text>
           <Text style={styles.subtitle}>可至設定中心 → 系統與 AI 重新啟用。</Text>
           {onSettings ? (
             <Pressable onPress={onSettings} style={styles.sendButton}>
@@ -180,10 +181,12 @@ export function AIScreen({ common, onSettings }: AIScreenProps) {
           ) : null}
         </View>
       </View>
+      </FontScaleScope>
     );
   }
 
   return (
+    <FontScaleScope prefs={common.prefs} percent={effectiveFontPercent}>
     <View style={styles.screen}>
       <View style={styles.header}>
         <View style={styles.headerText}>
@@ -211,7 +214,7 @@ export function AIScreen({ common, onSettings }: AIScreenProps) {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickRow}>
         {QUICK_PROMPTS.map(prompt => (
           <Pressable key={prompt} onPress={() => void submit(prompt)} style={styles.quickPrompt}>
-            <Text style={[styles.quickPromptText, { fontSize: 9 * fontScale }]}>{prompt}</Text>
+            <Text style={styles.quickPromptText}>{prompt}</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -228,7 +231,7 @@ export function AIScreen({ common, onSettings }: AIScreenProps) {
             key={message.id}
             style={[styles.bubble, message.role === 'user' ? styles.userBubble : styles.assistantBubble]}
           >
-            <Text style={[styles.bubbleText, { fontSize: 11 * fontScale, lineHeight: 18 * fontScale }, message.role === 'user' && styles.userBubbleText]}>
+            <Text style={[styles.bubbleText, message.role === 'user' && styles.userBubbleText]}>
               {message.text}
             </Text>
             {message.role === 'assistant' && message.sources.length ? (
@@ -264,7 +267,7 @@ export function AIScreen({ common, onSettings }: AIScreenProps) {
           placeholder="查詢 ETF、個股、總經事件或除權息…"
           placeholderTextColor="#94A3B8"
           returnKeyType="send"
-          style={[styles.input, { fontSize: 11 * fontScale }]}
+          style={styles.input}
         />
         <Pressable
           disabled={loading}
@@ -276,6 +279,7 @@ export function AIScreen({ common, onSettings }: AIScreenProps) {
       </View>
       </PageFrame>
     </View>
+    </FontScaleScope>
   );
 }
 
