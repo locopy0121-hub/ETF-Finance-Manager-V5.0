@@ -287,7 +287,6 @@ function SegmentedTabs({
   ];
 
   return (
-    <FontScaleScope prefs={prefs}>
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
@@ -1320,6 +1319,7 @@ export function SettingsScreen({
   };
 
   return (
+    <FontScaleScope prefs={prefs}>
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
