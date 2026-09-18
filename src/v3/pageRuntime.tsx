@@ -50,7 +50,8 @@ export function PageFrame({
   style?: StyleProp<ViewStyle>;
   fallbackOrder?: number;
 }) {
-  if (!pageCardVisible(prefs, page, cardId)) return null;
+  // Settings must remain recoverable even if its own frame is accidentally hidden.
+  if (page !== 'settings' && !pageCardVisible(prefs, page, cardId)) return null;
   const card = prefs.pageLayouts?.[page]?.cards?.find(item => item.id === cardId);
   const opacity = Math.max(0.35, Math.min(1, Number(card?.style?.backgroundOpacity ?? 100) / 100));
   return (
