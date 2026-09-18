@@ -9,7 +9,7 @@ import type { PageFieldKey, V3CardAlign, V3CardSpan, V3FieldConfig, V3FieldHeigh
 export type DesignerChoice={key:string;label:string};
 const recommendedChartType=(metric:string,source:string)=>metric==='todayPnl'||metric==='totalPnl'?(source==='intraday'?'pnlTrend':'positiveBar'):metric==='totalAssets'||metric==='marketValue'||metric==='cumulativeDividend'?(source==='daily'?'area':'line'):'line';
 const chartTypeName=(t:string)=>({line:'折線',area:'面積',bar:'柱狀',positiveBar:'正負柱',pnlTrend:'損益走勢',heatmap:'熱力',progress:'進度',scatter:'散佈',multiLine:'多折線',pie:'圓餅',donut:'環形',stackedBar:'堆疊柱',candlestick:'K線',volume:'成交量',waterfall:'瀑布',radar:'雷達'} as Record<string,string>)[t]||t;
-const pageNames:Record<PageFieldKey,string>={dashboard:'資產總覽',ledger:'智慧記帳',portfolio:'庫存清單',dividend:'股息日曆',calculator:'時空試算',detail:'ETF 詳情'};
+const pageNames:Record<PageFieldKey,string>={dashboard:'資產總覽',portfolio:'庫存清單',dividend:'股息日曆',ledger:'智慧記帳',calculator:'時空試算',market:'市場總覽',ai:'AI 助理',settings:'設定中心',detail:'ETF 詳情'};
 const clamp=(n:number,min:number,max:number)=>Math.max(min,Math.min(max,n));
 const nextFreeY=(cards:V3PageCard[])=>cards.reduce((m,c)=>Math.max(m,c.y+c.h),0);
 const spanLabel=(span:V3CardSpan)=>span===12?'整列':span===9?'3/4':span===8?'2/3':span===6?'1/2':span===4?'1/3':'1/4';
