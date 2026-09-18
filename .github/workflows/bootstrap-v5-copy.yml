@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: bootstrap-v5-copy
+  cancel-in-progress: true
+
 jobs:
   bootstrap-v5:
     if: github.actor != 'github-actions[bot]'
@@ -29,14 +33,13 @@ jobs:
           git -C "$SRC_DIR" checkout --quiet c1546537c3033a4e8d41b33011aa01b7d6524955
           rsync -a --delete \
             --exclude='.git' \
-            --exclude='.github/workflows/bootstrap-v5-copy.yml' \
+            --exclude='.github/workflows/' \
             "$SRC_DIR/" ./
 
       - name: Promote version declarations to V5.0.0
         shell: bash
         run: |
           set -euo pipefail
-
           npm version 5.0.0 --no-git-tag-version
 
           python3 - <<'PY'
@@ -57,80 +60,25 @@ jobs:
           version_path.write_text(text, encoding='utf-8')
 
           gradle = Path('android/app/build.gradle')
-          if gradle.exists():
-              text = gradle.read_text(encoding='utf-8')
-              text = text.replace('versionName "3.7.9"', 'versionName "5.0.0"')
-              gradle.write_text(text, encoding='utf-8')
+          text = gradle.read_text(encoding='utf-8').replace('versionName "3.7.9"', 'versionName "5.0.0"')
+          gradle.write_text(text, encoding='utf-8')
 
           strings = Path('android/app/src/main/res/values/strings.xml')
-          if strings.exists():
-              text = strings.read_text(encoding='utf-8')
-              text = text.replace('ETF財務管家 V3.7.9 NATIVE', 'ETF財務管家 V5.0.0 NATIVE')
-              text = text.replace('<string name="expo_runtime_version">3.7.9</string>', '<string name="expo_runtime_version">5.0.0</string>')
-              strings.write_text(text, encoding='utf-8')
+          text = strings.read_text(encoding='utf-8')
+          text = text.replace('ETF財務管家 V3.7.9 NATIVE', 'ETF財務管家 V5.0.0 NATIVE')
+          text = text.replace('<string name="expo_runtime_version">3.7.9</string>', '<string name="expo_runtime_version">5.0.0</string>')
+          strings.write_text(text, encoding='utf-8')
 
           readme = Path('README.md')
           readme_text = readme.read_text(encoding='utf-8') if readme.exists() else '# ETF財務管家\n'
           if readme_text.startswith('# ETF財務管家 '):
-              first, *rest = readme_text.splitlines()
+              _, *rest = readme_text.splitlines()
               readme_text = '# ETF財務管家 V5.0.0 NATIVE\n' + ('\n'.join(rest) + ('\n' if rest else ''))
           note = 'V5.0 正式上線：全藍圖 B UI 重構、7x5/7x6 智慧股息月曆、獨立 5 大 Tab 導覽與全方位連網 AI 助理'
           if note not in readme_text:
               readme_text += '\n## V5.0 正式上線\n\n' + note + '。\n'
           readme.write_text(readme_text, encoding='utf-8')
-
-          build = Path('.github/workflows/build-android-apk.yml')
-          if build.exists():
-              text = build.read_text(encoding='utf-8')
-              text = text.replace('V3.7.9', 'V5.0.0').replace('v3.7.9', 'v5.0.0').replace('3.7.9', '5.0.0')
-              text = text.replace(
-                  'on:\n  push:\n    branches: [main]\n  workflow_dispatch:\n',
-                  'on:\n  workflow_dispatch:\n',
-                  1,
-              )
-              build.write_text(text, encoding='utf-8')
           PY
-
-      - name: Add V5 continuous typecheck workflow
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat > .github/workflows/v5-ci.yml <<'YAML'
-          name: V5.0 Continuous Verification
-
-          on:
-            push:
-              branches: [main]
-            pull_request:
-              branches: [main]
-            workflow_dispatch:
-
-          permissions:
-            contents: read
-
-          jobs:
-            verify:
-              runs-on: ubuntu-latest
-              timeout-minutes: 20
-              steps:
-                - name: Checkout
-                  uses: actions/checkout@v5
-                - name: Setup Node.js
-                  uses: actions/setup-node@v6
-                  with:
-                    node-version: '22.23.2'
-                    cache: npm
-                - name: Install dependencies
-                  run: npm ci
-                - name: Huanan breaking-core contracts
-                  run: |
-                    node scripts/BREAKING_HUANAN_CORE_TEST.cjs
-                    node scripts/FINAL_ZERO_LEGACY_TEST.cjs
-                - name: TypeScript strict check
-                  run: npx tsc --noEmit
-                - name: Source diff integrity
-                  run: git diff --check
-          YAML
 
       - name: Install dependencies
         run: npm ci
