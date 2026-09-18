@@ -204,6 +204,11 @@ export function PortfolioScreen({
           <Text style={[styles.title, { fontSize: scaledFont(24, common.prefs) }]}>庫存持股</Text>
           <Text style={styles.subtitle}>資產配置與持股表現一目了然</Text>
         </View>
+        {common.prefs.ai.enabled && common.prefs.ai.showHeaderButton && common.onAi ? (
+          <Pressable onPress={common.onAi} style={styles.settingsButton}>
+            <Text style={styles.settingsButtonText}>✦</Text>
+          </Pressable>
+        ) : null}
         {onSettings ? (
           <Pressable onPress={onSettings} style={styles.settingsButton}>
             <Text style={styles.settingsButtonText}>⚙</Text>
