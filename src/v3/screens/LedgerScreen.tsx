@@ -405,7 +405,7 @@ export function LedgerScreen({
       <PageFrame prefs={common.prefs} page="ledger" cardId="ledger-summary">
         <View style={styles.summaryGrid}>
           {summaryItems
-            .filter(([key]) => pageFieldEnabled(common.prefs, 'ledger', key))
+            .filter(([key]) => pageFieldEnabled(common.prefs, 'ledger', key, 'ledger-summary'))
             .map(([key, label, value]) => (
               <View key={key} style={styles.summaryMetric}>
                 <Text style={styles.summaryMetricLabel}>{label}</Text>
