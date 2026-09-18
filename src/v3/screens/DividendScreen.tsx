@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 
 import { calculateDividendView } from '../engine';
-import { PageFrame, pageFieldEnabled } from '../pageRuntime';
+import { PageFrame, PageFrameStack, pageFieldEnabled } from '../pageRuntime';
 import { scaledFont } from '../blueprintB';
 import type { ScreenCommon } from '../screensBase';
 
@@ -228,6 +228,7 @@ export function DividendScreen({
         ) : null}
       </View>
 
+      <PageFrameStack prefs={common.prefs} page="dividend">
       <PageFrame prefs={common.prefs} page="dividend" cardId="dividend-summary">
       <View style={styles.summaryCard}>
         <View style={styles.monthDividendHero}>
@@ -611,6 +612,7 @@ export function DividendScreen({
         )}
       </View>
       </PageFrame>
+      </PageFrameStack>
     </ScrollView>
   );
 }
