@@ -64,7 +64,14 @@ export function PageFrameStack({
   const rank = new Map(
     (prefs.pageLayouts?.[page]?.cards ?? []).map((card, index) => [card.id, index]),
   );
-  const sorted = React.Children.toArray(children).sort((a, b) => {
+  const flatten = (nodes: React.ReactNode): React.ReactNode[] =>
+    React.Children.toArray(nodes).flatMap(node => {
+      if (React.isValidElement(node) && node.type === React.Fragment) {
+        return flatten((node.props as { children?: React.ReactNode }).children);
+      }
+      return [node];
+    });
+  const sorted = flatten(children).sort((a, b) => {
     const aId = React.isValidElement(a) ? String((a.props as { cardId?: string }).cardId ?? '') : '';
     const bId = React.isValidElement(b) ? String((b.props as { cardId?: string }).cardId ?? '') : '';
     return (rank.get(aId) ?? 999) - (rank.get(bId) ?? 999);
