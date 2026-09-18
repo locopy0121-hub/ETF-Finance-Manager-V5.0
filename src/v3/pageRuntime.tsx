@@ -35,13 +35,33 @@ export function pageCardOrder(prefs: V3Preferences, page: PageFieldKey, cardId: 
   return index >= 0 ? index : fallback;
 }
 
+export function PageFrameStack({
+  prefs,
+  page,
+  children,
+}: {
+  prefs: V3Preferences;
+  page: PageFieldKey;
+  children: React.ReactNode;
+}) {
+  const rank = new Map(
+    (prefs.pageLayouts?.[page]?.cards ?? []).map((card, index) => [card.id, index]),
+  );
+  const sorted = React.Children.toArray(children).sort((a, b) => {
+    const aId = React.isValidElement(a) ? String((a.props as { cardId?: string }).cardId ?? '') : '';
+    const bId = React.isValidElement(b) ? String((b.props as { cardId?: string }).cardId ?? '') : '';
+    return (rank.get(aId) ?? 999) - (rank.get(bId) ?? 999);
+  });
+  return <>{sorted}</>;
+}
+
 export function PageFrame({
   prefs,
   page,
   cardId,
   children,
   style,
-  fallbackOrder,
+  fallbackOrder: _fallbackOrder,
 }: {
   prefs: V3Preferences;
   page: PageFieldKey;
@@ -54,12 +74,7 @@ export function PageFrame({
   if (page !== 'settings' && !pageCardVisible(prefs, page, cardId)) return null;
   return (
     <View
-      style={[
-        {
-          order: pageCardOrder(prefs, page, cardId, fallbackOrder),
-        } as ViewStyle,
-        style,
-      ]}
+      style={style}
     >
       {children}
     </View>
