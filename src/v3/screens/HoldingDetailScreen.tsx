@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { calculateHoldingView } from '../engine';
-import { isGlobalFieldVisible, PageFrame } from '../pageRuntime';
+import { pageFieldsForFrame, PageFrame } from '../pageRuntime';
 import { V3_THEME, resolvePnlTone } from '../theme';
 import { scaledFont } from '../blueprintB';
 import type { ScreenCommon } from '../screensBase';
@@ -91,7 +91,7 @@ export function HoldingDetailScreen({
     cumulativeDividend:'累積配息',annualDividend:'每股年配息估值',costYield:'Cost Yield',weight:'資產權重',
     nav:'NAV / 淨值',premium:'折溢價',updatedAt:'行情時間',
   };
-  const fields = (common.prefs.pageCardFields.detail ?? []).filter(key => isGlobalFieldVisible(common.prefs, key));
+  const fields = pageFieldsForFrame(common.prefs, 'detail', 'detail-summary');
   const tone = resolvePnlTone(view.cashPnl, 'TW');
 
   return (
