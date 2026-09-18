@@ -11,7 +11,7 @@ import Svg, { Circle, G } from 'react-native-svg';
 import { calculateHoldingView, calculatePortfolioView } from '../engine';
 import { classifyEtf, type EtfCategory } from '../etfResearch';
 import { V3_THEME, resolvePnlTone } from '../theme';
-import { PageFrame, pageFieldEnabled } from '../pageRuntime';
+import { PageFrame, PageFrameStack, pageFieldEnabled } from '../pageRuntime';
 import { scaledFont } from '../blueprintB';
 import type { ScreenCommon } from '../screensBase';
 
@@ -218,6 +218,7 @@ export function PortfolioScreen({
         </Pressable>
       </View>
 
+      <PageFrameStack prefs={common.prefs} page="portfolio">
       <PageFrame prefs={common.prefs} page="portfolio" cardId="portfolio-allocation">
       <View style={styles.allocationCard}>
         <View style={styles.allocationHeader}>
@@ -252,6 +253,7 @@ export function PortfolioScreen({
       </View>
       </PageFrame>
 
+      <PageFrame prefs={common.prefs} page="portfolio" cardId="portfolio-list">
       <View style={styles.segmented}>
         {([
           ['all', '全部'],
@@ -273,7 +275,6 @@ export function PortfolioScreen({
         })}
       </View>
 
-      <PageFrame prefs={common.prefs} page="portfolio" cardId="portfolio-list">
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>持股清單</Text>
         <Text style={styles.sectionMeta}>{filteredRows.length} 檔 · 長按可管理</Text>
@@ -359,6 +360,7 @@ export function PortfolioScreen({
         })}
       </View>
       </PageFrame>
+      </PageFrameStack>
     </ScrollView>
   );
 }
