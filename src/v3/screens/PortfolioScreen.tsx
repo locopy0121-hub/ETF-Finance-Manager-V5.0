@@ -311,14 +311,14 @@ export function PortfolioScreen({
                   </View>
                 </View>
 
-                {common.prefs.visibility.totalPnl && pageFieldEnabled(common.prefs, 'portfolio', 'cashPnl') ? (
+                {common.prefs.visibility.totalPnl && pageFieldEnabled(common.prefs, 'portfolio', 'cashPnl', 'portfolio-list') ? (
                   <View style={[styles.pnlBadge, { backgroundColor: tone.background }]}>
                     <Text style={[styles.pnlValue, { color: tone.foreground }]}>
                       {privacy
                         ? '••••'
                         : `${row.view.cashPnl > 0 ? '+' : ''}${money(row.view.cashPnl)}`}
                     </Text>
-                    {pageFieldEnabled(common.prefs, 'portfolio', 'cashRoi') ? (
+                    {pageFieldEnabled(common.prefs, 'portfolio', 'cashRoi', 'portfolio-list') ? (
                       <Text style={[styles.pnlPct, { color: tone.foreground }]}>
                         {privacy ? '••••' : `${row.view.cashRoi > 0 ? '+' : ''}${row.view.cashRoi.toFixed(2)}%`}
                       </Text>
@@ -328,25 +328,25 @@ export function PortfolioScreen({
               </View>
 
               <View style={styles.metrics}>
-                {pageFieldEnabled(common.prefs, 'portfolio', 'price') ? (
+                {pageFieldEnabled(common.prefs, 'portfolio', 'price', 'portfolio-list') ? (
                   <View style={styles.metric}>
                     <Text style={styles.metricLabel}>現價</Text>
                     <Text style={styles.metricValue}>{row.view.price.toFixed(2)}</Text>
                   </View>
                 ) : null}
-                {pageFieldEnabled(common.prefs, 'portfolio', 'avgCost') ? (
+                {pageFieldEnabled(common.prefs, 'portfolio', 'avgCost', 'portfolio-list') ? (
                   <View style={styles.metric}>
                     <Text style={styles.metricLabel}>平均成本</Text>
                     <Text style={styles.metricValue}>{row.view.avgCost.toFixed(2)}</Text>
                   </View>
                 ) : null}
-                {pageFieldEnabled(common.prefs, 'portfolio', 'shares') ? (
+                {pageFieldEnabled(common.prefs, 'portfolio', 'shares', 'portfolio-list') ? (
                   <View style={styles.metric}>
                     <Text style={styles.metricLabel}>持有股數</Text>
                     <Text style={styles.metricValue}>{row.view.shares.toLocaleString()}</Text>
                   </View>
                 ) : null}
-                {pageFieldEnabled(common.prefs, 'portfolio', 'marketValue') ? (
+                {pageFieldEnabled(common.prefs, 'portfolio', 'marketValue', 'portfolio-list') ? (
                   <View style={[styles.metric, styles.metricRight]}>
                     <Text style={styles.metricLabel}>當前市值</Text>
                     <Text style={styles.metricValue}>
