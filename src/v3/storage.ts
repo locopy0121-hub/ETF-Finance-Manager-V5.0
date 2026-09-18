@@ -99,6 +99,14 @@ function mergeState(p:Partial<V3State>):V3State{
    }
   }
  }
+ const obsoleteSystemCards=new Set([
+  'dashboard-core-2','dashboard-market','dashboard-watchlist','dashboard-pnl-history',
+  'dashboard-daily-pnl','dashboard-wealth','dashboard-allocation',
+  'portfolio-summary','portfolio-contribution','portfolio-recent',
+ ]);
+ for(const layout of Object.values(pageLayouts) as any[]){
+  layout.cards=(layout.cards??[]).filter((card:any)=>!obsoleteSystemCards.has(String(card?.id??'')));
+ }
  const dashboard=pageLayouts.dashboard;
  if(dashboard?.cards?.length){
   const hero=dashboard.cards.find((c:any)=>c.id==='dashboard-core-1')??dashboard.cards[0];
