@@ -22,7 +22,7 @@ import {
 } from '../../data/brokerProfiles';
 import { useEtfCatalog } from '../../services/useEtfCatalog';
 import { searchEtfCatalog } from '../../services/etfCatalog';
-import { PageFrame, pageFieldEnabled } from '../pageRuntime';
+import { PageFrame, PageFrameStack, pageFieldEnabled } from '../pageRuntime';
 import { scaledFont } from '../blueprintB';
 
 type LedgerKind = 'buy' | 'sell' | 'dividend' | 'other';
@@ -401,6 +401,7 @@ export function LedgerScreen({
         </Pressable>
       </View>
 
+      <PageFrameStack prefs={common.prefs} page="ledger">
       <PageFrame prefs={common.prefs} page="ledger" cardId="ledger-summary">
         <View style={styles.summaryGrid}>
           {summaryItems
@@ -414,6 +415,7 @@ export function LedgerScreen({
         </View>
       </PageFrame>
 
+      <PageFrame prefs={common.prefs} page="ledger" cardId="ledger-form">
       <View style={styles.segmented}>
         {([
           ['buy', '買進'],
@@ -445,7 +447,6 @@ export function LedgerScreen({
         })}
       </View>
 
-      <PageFrame prefs={common.prefs} page="ledger" cardId="ledger-form">
       <View style={styles.formCard}>
         <View style={styles.formHeader}>
           <View>
@@ -817,6 +818,7 @@ export function LedgerScreen({
         )}
       </View>
       </PageFrame>
+      </PageFrameStack>
     </ScrollView>
   );
 }
