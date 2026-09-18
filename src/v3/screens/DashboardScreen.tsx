@@ -17,7 +17,7 @@ import {
 import { HeroAssetCard } from '../components/HeroAssetCard';
 import { V3_THEME, resolvePnlTone } from '../theme';
 import { PageFrame, PageFrameStack, pageFieldEnabled } from '../pageRuntime';
-import { scaledFont } from '../blueprintB';
+import FontScaleScope from '../components/FontScaleScope';
 import type { ScreenCommon } from '../screensBase';
 
 type DashboardScreenProps = {
@@ -251,6 +251,7 @@ export function DashboardScreen({
   };
 
   return (
+    <FontScaleScope prefs={prefs}>
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
@@ -259,7 +260,7 @@ export function DashboardScreen({
       <View style={styles.welcomeRow}>
         <View style={styles.welcome}>
           <Text style={styles.eyebrow}>ETF 財務管家</Text>
-          <Text style={[styles.title, { fontSize: scaledFont(24, prefs) }]}>歡迎回來</Text>
+          <Text style={styles.title}>歡迎回來</Text>
           <Text style={styles.subtitle}>
             今天也用清楚的數據，穩定累積你的資產。
           </Text>
@@ -498,6 +499,7 @@ export function DashboardScreen({
       ) : null}
       </PageFrameStack>
     </ScrollView>
+    </FontScaleScope>
   );
 }
 
