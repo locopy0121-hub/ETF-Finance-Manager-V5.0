@@ -1,0 +1,112 @@
+name: Restore Broker Module V3.7
+
+on:
+  push:
+    branches: [main]
+    paths: ['.gogo-restore-broker-module']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CI: 'true'
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 20
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Precheck broker restoration contract
+        id: precheck
+        shell: bash
+        run: |
+          set +e
+          node scripts/BROKER_MODULE_RESTORE_TEST.cjs
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then
+            echo 'already_restored=true' >> "$GITHUB_OUTPUT"
+            echo 'Broker module already satisfies the restoration contract.'
+          else
+            echo 'already_restored=false' >> "$GITHUB_OUTPUT"
+            echo 'Broker module restoration is required.'
+          fi
+
+      - name: Apply deterministic broker restoration
+        if: steps.precheck.outputs.already_restored != 'true'
+        run: python3 scripts/RESTORE_BROKER_MODULE_V37.py
+
+      - name: Normalize generated broker integration
+        if: steps.precheck.outputs.already_restored != 'true'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p=Path('src/v3/screensBase.tsx')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('title=\\"交易券商\\"','title="交易券商"')
+          start=s.find('function BrokerProfileManager')
+          if start < 0:
+              escaped=s.find('\\nfunction BrokerProfileManager')
+              if escaped >= 0:
+                  s=s[:escaped]+'\n'+s[escaped+2:]
+                  start=s.find('function BrokerProfileManager')
+          end=s.find('export function SettingsModal', start if start >= 0 else 0)
+          if start >= 0 and end > start:
+              block=s[start:end].replace('\\n','\n').replace('\\"','"')
+              s=s[:start]+block+s[end:]
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('App.tsx')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace(
+              'rebuildHoldingsFromLedger(s.holdings,s.ledger,symbols)',
+              'rebuildHoldingsFromLedger(s.holdings,s.ledger,symbols,s.brokerProfiles)',
+              1,
+          )
+          s=s.replace(
+              'onConfirmBuy={(draft:AiBuyDraft)=>{addBuy(draft);',
+              'onConfirmBuy={(draft:AiBuyDraft)=>{addBuy({...draft,brokerProfileId:state.defaultBrokerProfileId});',
+              1,
+          )
+          p.write_text(s,encoding='utf-8')
+          PY
+
+      - name: GREEN - broker contract
+        run: node scripts/BROKER_MODULE_RESTORE_TEST.cjs
+
+      - name: Install dependencies for TypeScript verification
+        timeout-minutes: 10
+        env:
+          npm_config_audit: 'false'
+          npm_config_fund: 'false'
+          npm_config_fetch_retries: '2'
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: TypeScript verification
+        run: npx tsc --noEmit
+
+      - name: Diff integrity
+        run: git diff --check
+
+      - name: Commit restored broker module
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/data/brokerProfiles.ts src/types/etf.ts src/utils/etfCalculators.ts src/v3/model.ts src/v3/storage.ts src/v3/engine.ts src/v3/screensBase.tsx App.tsx
+          if git diff --cached --quiet; then
+            echo 'No broker restoration changes to commit.'
+          else
+            git commit -m 'fix(v3.7): restore broker profile accounting module'
+            git push origin HEAD:main
+          fi
