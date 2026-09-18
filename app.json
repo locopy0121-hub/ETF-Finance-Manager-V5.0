@@ -8,7 +8,7 @@
     "runtimeVersion": "5.0.0",
     "android": {
       "package": "com.etfpilot.twselive",
-      "versionCode": 47,
+      "versionCode": 50000,
       "adaptiveIcon": {
         "foregroundImage": "./assets/v3-icon.png",
         "backgroundColor": "#0B111E"
