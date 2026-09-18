@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { calculateHoldingView } from '../engine';
 import { PageFrame, pageFieldEnabled } from '../pageRuntime';
 import { V3_THEME, resolvePnlTone } from '../theme';
-import { scaledFont } from '../blueprintB';
+import FontScaleScope from '../components/FontScaleScope';
 import type { ScreenCommon } from '../screensBase';
 
 type MarketScreenProps = {
@@ -56,11 +56,12 @@ export function MarketScreen({ common, onSettings, onOpenHolding }: MarketScreen
   const showVolume = pageFieldEnabled(prefs, 'market', 'volume', 'market-main');
 
   return (
+    <FontScaleScope prefs={prefs}>
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.eyebrow}>MARKET</Text>
-          <Text style={[styles.title, { fontSize: scaledFont(24, prefs) }]}>市場總覽</Text>
+          <Text style={styles.title}>市場總覽</Text>
           <Text style={styles.subtitle}>觀察清單與目前持股的即時行情</Text>
         </View>
         <View style={styles.headerActions}>
@@ -123,6 +124,7 @@ export function MarketScreen({ common, onSettings, onOpenHolding }: MarketScreen
         </View>
       </PageFrame>
     </ScrollView>
+    </FontScaleScope>
   );
 }
 
