@@ -21,6 +21,7 @@ import type {
 import { PAGE_REGISTRY, type PageFieldKey } from '../pageRegistry';
 import { normalizeGridMonitor } from '../monitoring';
 import { PageFrame } from '../pageRuntime';
+import FontScaleScope from '../components/FontScaleScope';
 import {
   EFFECT_KINDS,
   effectDefaults,
@@ -286,6 +287,7 @@ function SegmentedTabs({
   ];
 
   return (
+    <FontScaleScope prefs={prefs}>
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
@@ -1325,7 +1327,7 @@ export function SettingsScreen({
     >
       <View style={styles.header}>
         <Text style={styles.eyebrow}>SETTINGS / PAGE FRAME EDITOR 2.0</Text>
-        <Text style={[styles.pageTitle, { fontSize: 24 * Math.max(.8, Math.min(1.6, prefs.fontScale / 100)) }]}>設定與頁面編輯器</Text>
+        <Text style={styles.pageTitle}>設定與頁面編輯器</Text>
         <Text style={styles.pageSubtitle}>
           Page Frame Editor 2.0 與舊版百寶箱功能統一收納；只改 UI、監控、通知與系統設定，不改金融計算。
         </Text>
@@ -2232,6 +2234,7 @@ export function SettingsScreen({
         onSave={saveFrame}
       />
     </ScrollView>
+    </FontScaleScope>
   );
 }
 
