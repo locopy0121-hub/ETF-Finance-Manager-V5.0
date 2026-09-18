@@ -23,7 +23,7 @@ import {
 import { useEtfCatalog } from '../../services/useEtfCatalog';
 import { searchEtfCatalog } from '../../services/etfCatalog';
 import { PageFrame, PageFrameStack, pageFieldEnabled } from '../pageRuntime';
-import { scaledFont } from '../blueprintB';
+import FontScaleScope from '../components/FontScaleScope';
 
 type LedgerKind = 'buy' | 'sell' | 'dividend' | 'other';
 
@@ -372,6 +372,7 @@ export function LedgerScreen({
           : '新增其他資金紀錄';
 
   return (
+    <FontScaleScope prefs={common.prefs}>
     <ScrollView
       ref={scrollRef}
       style={styles.screen}
@@ -382,7 +383,7 @@ export function LedgerScreen({
       <View style={styles.headerRow}>
         <View style={styles.headerText}>
           <Text style={styles.eyebrow}>SMART LEDGER</Text>
-          <Text style={[styles.title, { fontSize: scaledFont(24, common.prefs) }]}>智慧記帳</Text>
+          <Text style={styles.title}>智慧記帳</Text>
           <Text style={styles.subtitle}>
             交易、股息與資金異動統一寫入既有帳務資料鏈
           </Text>
@@ -825,6 +826,7 @@ export function LedgerScreen({
       </PageFrame>
       </PageFrameStack>
     </ScrollView>
+    </FontScaleScope>
   );
 }
 
