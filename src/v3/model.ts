@@ -5,6 +5,8 @@ import { AppSettings, DailySnapshot } from '../storage/appStorage';
 import type { TradeMode } from '../types/etf';
 import type { BrokerProfile } from '../data/brokerProfiles';
 import type { UniversalEditorNode } from '../ui/editorSchema';
+import type { PageFieldKey } from './pageRegistry';
+export type { PageFieldKey } from './pageRegistry';
 
 export type LedgerKind = 'buy' | 'sell' | 'dividend' | 'cashIn' | 'cashOut';
 export type CashReconciliation = { actualBalance?:number; checkedAt?:number; broker?:string; account?:string; note?:string; };
@@ -59,7 +61,6 @@ export type HomeMetricKey =
   | 'holdingCount'
   | 'pendingDividends';
 
-export type PageFieldKey = 'dashboard'|'ledger'|'portfolio'|'dividend'|'calculator'|'detail';
 export type PageFieldSelection = Record<PageFieldKey,string[]>;
 export type V3CardSpan = 12|9|8|6|4|3;
 export type V3FieldHeight = 'auto'|1|2|3|4|'custom';
@@ -236,27 +237,33 @@ export const defaultPageCardFields:PageFieldSelection={
   portfolio:['shares','avgCost','price','marketValue','pureCost','totalFees','totalCost','pnl','roi','cashPnl','cashRoi','weight','cumulativeDividend','lastBuyDate'],
   dividend:['cumulativeDividends','yearReceived','yearExpected','monthlyAverage','pendingDividend','nextPayDate','costYield','nextExDate','eligibleShares'],
   calculator:['sourceMode','initialCapital','currentSnapshotValue','monthlyContribution','years','annualReturn','annualDividendYield','invested','futureValue','pnl','roi','cumulativeDividend'],
+  market:['symbol','price','changePct','volume'],
+  ai:[],
+  settings:[],
   detail:['shares','purchaseCount','pureCost','totalFees','totalCost','historicalTradeCost','historicalBuyFees','historicalCashOutflow','avgCost','cashAvgCost','broker','account','lastBuyDate','price','previousClose','open','high','low','volume','todayPnl','todayPnlPct','marketValue','pnl','roi','cashPnl','cashRoi','realizedPricePnl','realizedCashPnl','cumulativeDividend','annualDividend','costYield','weight','nav','premium','updatedAt'],
 };
 
 export const defaultPageCardSpans:PageFieldSpans={
-  dashboard:{},ledger:{},portfolio:{},dividend:{},calculator:{},detail:{},
+  dashboard:{},ledger:{},portfolio:{},dividend:{},calculator:{},market:{},ai:{},settings:{},detail:{},
 };
 
 
 export function makeDefaultPageLayouts(homeCards:HomeMetricKey[][]=[['totalAssets','todayPnl','todayPnlPct'],['marketValue','cashBalance','cumulativeDividends'],['totalPnl','totalRoi','pricePnl','holdingCount']],pageFields:PageFieldSelection=defaultPageCardFields):V3PageLayouts{
- const style:V3CardStyle={fontScale:100,align:'left',backgroundOpacity:82,radius:6,padding:12};
+ const style:V3CardStyle={fontScale:100,align:'left',backgroundOpacity:100,radius:16,padding:12};
  const text=(align:V3CardAlign='left'):V3TextConfig=>({visible:true,fontScale:100,fontWeight:'800',align,verticalAlign:'top'});
  const field=(span:V3CardSpan=6):V3FieldConfig=>({span,height:'auto',label:{...text('left'),lineHeightScale:125},value:{...text('left'),fontWeight:'900',verticalAlign:'bottom',lineHeightScale:125},labelValueGap:6,backgroundOpacity:3,radius:10,padding:8,paddingTop:8,paddingRight:8,paddingBottom:8,paddingLeft:8});
  const card=(id:string,title:string,fields:string[],x:number,y:number,w:number,h:number):V3PageCard=>({id,title,kind:'system',fields:[...fields],fieldSpans:Object.fromEntries(fields.map(k=>[k,6])) as Record<string,V3CardSpan>,fieldConfigs:Object.fromEntries(fields.map(k=>[k,field(6)])) as Record<string,V3FieldConfig>,x,y,w,h,hidden:false,style:{...style}});
  const hero=card('dashboard-core-1','總資產與核心指標',homeCards[0]??['totalAssets','todayPnl','todayPnlPct'],0,0,6,3);
  hero.chartConfig={enabled:true,source:'intraday',metric:'totalAssets',range:120,showPoints:false,showZeroLine:false,chartType:'area',layout:'dataLeftChartRight',dataRatio:'1/2'};
  return {
-  dashboard:{columns:6,cards:[hero,card('dashboard-core-2','資產與現金',homeCards[1]??[],0,3,3,2),card('dashboard-core-3','損益與股息',homeCards[2]??[],3,3,3,2),{...card('dashboard-market','市場總覽｜熱門 ETF',[],0,5,6,2),role:'module'},{...card('dashboard-watchlist','ETF 搜尋 / 自選管理',[],0,7,6,2),role:'module'},{...card('dashboard-pnl-history','累積損益紀錄',[],0,9,6,2),role:'module'},{...card('dashboard-daily-pnl','每日損益紀錄',[],0,11,6,2),role:'module'},{...card('dashboard-wealth','資產成長｜投入 vs 資產',[],0,13,6,2),role:'module'},{...card('dashboard-allocation','資產配置',[],0,15,6,2),role:'module'}]},
+  dashboard:{columns:6,cards:[hero,card('dashboard-core-2','資產與現金',homeCards[1]??[],0,3,3,2),card('dashboard-core-3','損益與股息',homeCards[2]??[],3,3,3,2),{...card('dashboard-holdings','主要持倉',[],0,5,6,2),role:'module'},{...card('dashboard-grid-monitor','雙欄宮格監控',[],0,7,6,2),role:'module'},{...card('dashboard-market','市場總覽｜熱門 ETF',[],0,9,6,2),role:'module'},{...card('dashboard-watchlist','ETF 搜尋 / 自選管理',[],0,11,6,2),role:'module'},{...card('dashboard-pnl-history','累積損益紀錄',[],0,13,6,2),role:'module'},{...card('dashboard-daily-pnl','每日損益紀錄',[],0,15,6,2),role:'module'},{...card('dashboard-wealth','資產成長｜投入 vs 資產',[],0,17,6,2),role:'module'},{...card('dashboard-allocation','資產配置',[],0,19,6,2),role:'module'}]},
   ledger:{columns:6,cards:[card('ledger-summary','智慧記帳摘要',pageFields.ledger??[],0,0,6,2)]},
   portfolio:{columns:6,cards:[{...card('portfolio-summary','庫存摘要',pageFields.portfolio??[],0,0,6,2),role:'summary'},{...card('portfolio-list','庫存清單模板',pageFields.portfolio??[],0,2,6,2),role:'listTemplate'},{...card('portfolio-contribution','損益貢獻排行',[],0,4,6,2),role:'module'},{...card('portfolio-recent','最近交易 / 股息',[],0,6,6,2),role:'module'},{...card('portfolio-allocation','ETF 市值配置',[],0,8,6,2),role:'module'}]},
   dividend:{columns:6,cards:[card('dividend-summary','股息摘要',pageFields.dividend??[],0,0,6,2)]},
   calculator:{columns:6,cards:[card('calculator-summary','試算摘要',pageFields.calculator??[],0,0,6,2)]},
+  market:{columns:6,cards:[card('market-main','市場總覽',pageFields.market??[],0,0,6,2)]},
+  ai:{columns:6,cards:[card('ai-main','AI 助理',pageFields.ai??[],0,0,6,2)]},
+  settings:{columns:6,cards:[card('settings-main','設定中心',pageFields.settings??[],0,0,6,2)]},
   detail:{columns:6,cards:[card('detail-summary','ETF 詳情摘要',pageFields.detail??[],0,0,6,2)]},
  };
 }
@@ -264,7 +271,7 @@ export function makeDefaultPageLayouts(homeCards:HomeMetricKey[][]=[['totalAsset
 export const defaultV3Preferences: V3Preferences = {
   privacyMode: false,
   colorMode: 'tw',
-  themeId:'obsidianGold',
+  themeId:'glacierLight',
   navDisplayMode:'iconText',
   iconDisplay:{enabled:true,section:true,nav:true,ai:true,widget:true},
   appIconKey:'icon-01',
@@ -272,27 +279,27 @@ export const defaultV3Preferences: V3Preferences = {
   globalEditMode:false,
   editorPresets:[],
   customThemes:[],
-  backgroundPreset: 'deepFinance',
+  backgroundPreset: 'custom',
   backgroundImageUri: '',
   backgroundOpacity: 100,
-  overlayOpacity: 26,
-  cardOpacity: 82,
-  cardRadius: 6,
+  overlayOpacity: 0,
+  cardOpacity: 100,
+  cardRadius: 16,
   cardBackgroundImageUri:'',
-  cardBackgroundImageOpacity:22,
+  cardBackgroundImageOpacity:0,
   fontScale: 100,
-  primaryTextColor:'#FFFFFF',
-  secondaryTextColor:'#8E9BAE',
-  accentColor:'#D4AF37',
-  positiveColor:'#E54A45',
-  negativeColor:'#12A875',
+  primaryTextColor:'#0F172A',
+  secondaryTextColor:'#64748B',
+  accentColor:'#0066FF',
+  positiveColor:'#EF4444',
+  negativeColor:'#10B981',
   followThemeProfitLossColors:true,
   market:{autoRefresh:true,refreshSeconds:5,onlyTradingHours:true,refreshOnForeground:true,useCloseSnapshotAfterHours:true,scheduleEnabled:true,stopAll:false,live:{enabled:true,start:'08:30',end:'14:00',refreshSeconds:1},afterHours:{enabled:true,start:'14:00',end:'08:30',refreshSeconds:600},source:'TWSE'},
   ai:{enabled:true,showHeaderButton:true,confirmWrites:true,localParser:true,fontScale:100},
   visibility:{nav:true,premium:false,liveQuote:true,todayPnl:true,totalPnl:true,dividends:true,marketNews:true,aiInsights:true,smartTicker:true,updatedAt:true},
   money:{currencyStyle:'plain',moneyMode:'smart',moneyDigits:2,customMoneyDigits:2,percentMode:'smart',percentDigits:2,customPercentDigits:2,dividendDigits:4,plainMode:'smart',plainDigits:0},
-  calendar:{followTheme:true,backgroundOpacity:72,cellRadius:10,cellHeight:42,fontScale:100,grid:true,density:'standard',eventStyle:'dot',todayStyle:'outline',selectedStyle:'fill',weekendEmphasis:true,backgroundColor:'#101A2A',textColor:'#F8FAFC',accentColor:'#D4AF37',weekendColor:'#FCA5A5',eventColor:'#4CC9F0'},
-  lifestyleProgress:{enabled:true,title:'生活感加薪進度',targetMode:'monthlyDividend',customTarget:20000,showPercent:true,showAmounts:true,animation:'pulse',fontScale:100,radius:10,opacity:100,followTheme:true,accentColor:'#4CC9F0',backgroundColor:'#101A2A',textColor:'#F8FAFC'},
+  calendar:{followTheme:true,backgroundOpacity:100,cellRadius:10,cellHeight:42,fontScale:100,grid:true,density:'standard',eventStyle:'dot',todayStyle:'outline',selectedStyle:'fill',weekendEmphasis:true,backgroundColor:'#FFFFFF',textColor:'#0F172A',accentColor:'#0066FF',weekendColor:'#EF4444',eventColor:'#0066FF'},
+  lifestyleProgress:{enabled:true,title:'生活感加薪進度',targetMode:'monthlyDividend',customTarget:20000,showPercent:true,showAmounts:true,animation:'pulse',fontScale:100,radius:16,opacity:100,followTheme:true,accentColor:'#0066FF',backgroundColor:'#FFFFFF',textColor:'#0F172A'},
   ticker:{enabled:true,fontScale:100,fontWeight:'800',opacity:92,radius:12,speedSeconds:4,pauseSeconds:1,direction:'left',animation:'scroll',animationStrength:50,reduceMotion:false,followTheme:true,maxItems:8,sources:['todayPnl','totalPnl','dividend','nextDividend','lastBuy','market']},
   dailyPnl:{symbolStyle:'solid',fontScale:100,radius:10,opacity:100,showName:true,showMarketValue:true,showPercent:true,showUpdatedAt:true,positiveColor:'#E54A45',negativeColor:'#12A875',neutralColor:'#64748B'},
   chartInteraction:{singleTapCycle:true,doubleTapZoom:true,rememberStyle:true,defaultRange:'1m'},
