@@ -221,11 +221,18 @@ export function DividendScreen({
             以月曆查看除息日、領息日與當日配息明細
           </Text>
         </View>
-        {onSettings ? (
-          <Pressable onPress={onSettings} style={styles.settingsButton}>
-            <Text style={styles.settingsButtonText}>⚙</Text>
-          </Pressable>
-        ) : null}
+        <View style={styles.headerActions}>
+          {common.prefs.ai.enabled && common.prefs.ai.showHeaderButton && common.onAi ? (
+            <Pressable onPress={common.onAi} style={styles.settingsButton}>
+              <Text style={styles.settingsButtonText}>✦</Text>
+            </Pressable>
+          ) : null}
+          {onSettings ? (
+            <Pressable onPress={onSettings} style={styles.settingsButton}>
+              <Text style={styles.settingsButtonText}>⚙</Text>
+            </Pressable>
+          ) : null}
+        </View>
       </View>
 
       <PageFrameStack prefs={common.prefs} page="dividend">
@@ -629,6 +636,7 @@ const styles = StyleSheet.create({
   },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 16 },
   header: { flex: 1 },
+  headerActions: { flexDirection: 'row', gap: 8 },
   settingsButton: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   settingsButtonText: { color: '#0066FF', fontSize: 17 },
   eyebrow: {
