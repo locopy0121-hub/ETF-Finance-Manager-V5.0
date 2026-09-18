@@ -89,9 +89,21 @@ export function PageFrame({
 }) {
   // Settings must remain recoverable even if its own frame is accidentally hidden.
   if (page !== 'settings' && !pageCardVisible(prefs, page, cardId)) return null;
+  const editActive =
+    prefs.globalEditMode || Boolean(prefs.monitoring?.pageCustomize?.[page]);
   return (
     <View
-      style={style}
+      style={[
+        editActive
+          ? {
+              borderWidth: 1.5,
+              borderColor: '#0066FF',
+              borderRadius: 16,
+              padding: 2,
+            }
+          : undefined,
+        style,
+      ]}
     >
       {children}
     </View>
