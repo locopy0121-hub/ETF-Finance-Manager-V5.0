@@ -1,6 +1,11 @@
 name: V5.0.0 Blueprint B Final APK
 
 on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '.build-results/**'
   workflow_dispatch:
 
 permissions:
