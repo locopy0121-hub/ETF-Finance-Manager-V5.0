@@ -274,15 +274,15 @@ export function DashboardScreen({
         <HeroAssetCard
           portfolio={portfolio}
           market="TW"
-          showTotalAssets={pageFieldEnabled(prefs, 'dashboard', 'totalAssets')}
-          showTodayPnl={pageFieldEnabled(prefs, 'dashboard', 'todayPnl')}
-          showTotalPnl={pageFieldEnabled(prefs, 'dashboard', 'totalPnl')}
+          showTotalAssets={pageFieldEnabled(prefs, 'dashboard', 'totalAssets', 'dashboard-core-1')}
+          showTodayPnl={pageFieldEnabled(prefs, 'dashboard', 'todayPnl', 'dashboard-core-1')}
+          showTotalPnl={pageFieldEnabled(prefs, 'dashboard', 'totalPnl', 'dashboard-core-1')}
           fontScale={prefs.fontScale}
           privacyMode={prefs.privacyMode}
         />
       </PageFrame>
 
-      {prefs.visibility.dividends && pageFieldEnabled(prefs, 'dashboard', 'cumulativeDividends') ? (
+      {prefs.visibility.dividends && pageFieldEnabled(prefs, 'dashboard', 'cumulativeDividends', 'dashboard-core-3') ? (
       <PageFrame prefs={prefs} page="dashboard" cardId="dashboard-core-3">
       <View style={styles.doubleColumn}>
         <StatCard
