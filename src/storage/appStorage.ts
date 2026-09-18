@@ -1,0 +1,80 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Holding } from '../data/portfolio';
+import { DividendEvent } from '../screens/DividendCalendarScreen';
+
+export type WidgetField = 'totalPnl'|'totalPnlPct'|'todayPnl'|'todayPnlPct'|'marketValue'|'totalAssets'|'historicalTradeCost'|'historicalBuyFees'|'historicalCashOutflow'|'currentTradeCost'|'currentCashBasis'|'pricePnl'|'cashUnrealizedPnl'|'totalCost'|'costPnl'|'costPnlPct'|'cumulativeDividend'|'monthDividend'|'monthContribution'|'monthGoal'|'health'|'nextAllocation'|'nextDividend'|'lastBuyReminder'|'holdingCount'|'etfPrice'|'etfShares'|'etfMarketValue'|'etfCost'|'etfTradeCost'|'etfBuyFee'|'etfCashBasis'|'etfPricePnl'|'etfCashPnl'|'etfTodayPnl'|'etfTotalPnl'|'etfReturn'|'updatedAt'|'marketState';
+export type WidgetAlign='left'|'center'|'right';
+export type WidgetTrendMetric='todayPnl'|'totalPnl'|'totalAssets'|'marketValue';
+export type WidgetTrendSource='intraday'|'daily';
+export type WidgetTrendChartType='line'|'area'|'bar'|'sparkline'|'step';
+export type WidgetSettings = { enabled:boolean; startTime:string; endTime:string; weekdaysOnly:boolean; opacity:number; refreshMinutes:number; refreshSeconds:number; fontScale:number; align:WidgetAlign; sortMode:'marketValue'|'totalPnl'|'todayPnl'|'custom'; displayFields:WidgetField[]; selectedSymbols:string[]; showStatusLight:boolean; showTrendChart:boolean; trendMetric:WidgetTrendMetric; trendSource:WidgetTrendSource; trendRange:number; trendChartType:WidgetTrendChartType; trendShowLastValue:boolean; trendShowPercent:boolean; trendHeight:number; trendLineWidth:number; trendShowGrid:boolean; trendShowAxis:boolean; trendShowUpdatedAt:boolean; compactChart:boolean; };
+export type OtaSettings = { autoCheck:boolean; delayMinutes:number; };
+export type GoalSettings = { monthlyPassiveIncomeTarget:number; monthlyContributionTarget:number; totalAssetsTarget:number; targetDate:string; assumedCashYield:number; assumedAnnualReturn:number; };
+export type CloseNotificationField='todayPnl'|'todayPnlPct'|'totalPnl'|'totalPnlPct'|'marketValue'|'totalAssets'|'historicalTradeCost'|'historicalBuyFees'|'historicalCashOutflow'|'pricePnl'|'cashUnrealizedPnl'|'totalCost'|'costPnl'|'cumulativeDividend'|'updatedAt'|'selectedEtfPnl';
+export type CloseNotificationSettings = { enabled:boolean; time:string; weekdaysOnly:boolean; title:string; maxLines:2|3|4; showPercent:boolean; displayFields:CloseNotificationField[]; selectedSymbols:string[]; showTodayPnl:boolean; showTotalPnl:boolean; showMarketValue:boolean; showTotalCost:boolean; showCostPnl:boolean; showDividend:boolean; };
+export type DailySnapshot = { id:string; date:string; createdAt:number; marketValue:number; cashBalance?:number; totalAssets?:number; totalCost:number; historicalTradeCost?:number; historicalBuyFees?:number; historicalCashOutflow?:number; currentTradeCost?:number; currentCashBasis?:number; pricePnl?:number; cashUnrealizedPnl?:number; todayPnl:number; todayPnlPct:number; costPnl:number; costPnlPct:number; totalPnl:number; totalPnlPct:number; cumulativeDividend:number; holdings:Array<{symbol:string;shares:number;price:number;marketValue:number;todayPnl:number;totalPnl:number}>; };
+export type DashboardField = string;
+export type HoldingLayoutField = string;
+export type LayoutSpan = 2|3|6; // 2=1/3, 3=1/2, 6=整列
+export type PageLayoutState={fields:string[];spans:Record<string,LayoutSpan>};
+export type ThemePreset='clean'|'greenGrowth'|'taipeiDawn'|'deepFinance'|'emeraldGlass'|'goldenValley'|'neonCity'|'futureEarth'|'mistyGrowth'|'custom';
+export type EtfTemplateField='price'|'shares'|'marketValue'|'pureCost'|'totalCost'|'avgCost'|'costPnl'|'costPnlPct'|'todayPnl'|'todayPnlPct'|'cumulativeDividend'|'annualDividend'|'cashYield'|'lastBuyDate'|'purchaseCount'|'buyFee';
+export type TextAlignSetting='left'|'center'|'right';
+export type ModuleAppearance={followGlobal:boolean;fontScale:number;textColor:string;align:TextAlignSetting};
+export type LayoutSettings = { appTitle:string; appSubtitle:string; titleAlign:'left'|'center'|'right'; titleScale:number; homeColumns:1|2|3; homeFields:DashboardField[]; homeFieldSpans:Record<string,LayoutSpan>; homeSelectedSymbols:string[]; etfTemplateFields:EtfTemplateField[]; etfTemplateFieldSpans:Record<string,LayoutSpan>; etfTemplateSelectedSymbols:string[]; holdingColumns:1|2|3; holdingFields:HoldingLayoutField[]; holdingFieldSpans:Record<string,LayoutSpan>; pageLayouts:Record<string,PageLayoutState>; fontScale:number; compactCards:boolean; wrapText:boolean; autoCardHeight:boolean; cardRadius:number; cardPadding:number; backgroundImageUri:string; backgroundImageOpacity:number; backgroundOverlay:number; themePreset:ThemePreset; cardOpacity:number; cardTint:string; cardBackgroundImageUri:string; cardBackgroundImageOpacity:number; primaryTextColor:string; secondaryTextColor:string; accentColor:string; positiveColor:string; negativeColor:string; autoContrast:boolean; globalTextAlign:TextAlignSetting; moduleAppearance:Record<string,ModuleAppearance>; };
+export type AppSettings = { widget:WidgetSettings; ota:OtaSettings; goals:GoalSettings; closeNotification:CloseNotificationSettings; layout:LayoutSettings; };
+export type PersistedAppState = { schemaVersion:number; holdings:Holding[]; dividendEvents:DividendEvent[]; settings:AppSettings; dailySnapshots:DailySnapshot[]; savedAt:number; };
+
+export const APP_STATE_KEY='@etf-finance-manager/app-state';
+const KEY=APP_STATE_KEY;
+export const STORAGE_SCHEMA_VERSION=16;
+export const APP_INITIALIZED_KEY='@etf-finance-manager/initialized';
+export const defaultAppSettings:AppSettings={
+  widget:{enabled:true,startTime:'09:00',endTime:'13:30',weekdaysOnly:true,opacity:85,refreshMinutes:1,refreshSeconds:5,fontScale:100,align:'left',sortMode:'marketValue',displayFields:['totalPnl','totalPnlPct','todayPnl','totalAssets','historicalTradeCost','historicalBuyFees','historicalCashOutflow','etfPrice','etfShares','etfPricePnl','updatedAt','marketState'],selectedSymbols:[],showStatusLight:true,showTrendChart:true,trendMetric:'totalPnl',trendSource:'intraday',trendRange:120,trendChartType:'area',trendShowLastValue:true,trendShowPercent:true,trendHeight:64,trendLineWidth:3,trendShowGrid:true,trendShowAxis:false,trendShowUpdatedAt:true,compactChart:true},
+  ota:{autoCheck:true,delayMinutes:5},
+  goals:{monthlyPassiveIncomeTarget:20000,monthlyContributionTarget:25000,totalAssetsTarget:3000000,targetDate:'2031-12-31',assumedCashYield:0.04,assumedAnnualReturn:0.06},
+  closeNotification:{enabled:true,time:'13:35',weekdaysOnly:true,title:'ETF財務管家｜今日收盤',maxLines:3,showPercent:true,displayFields:['todayPnl','totalPnl','marketValue'],selectedSymbols:[],showTodayPnl:true,showTotalPnl:true,showMarketValue:true,showTotalCost:false,showCostPnl:true,showDividend:false},
+  layout:{appTitle:'ETF財務管家',appSubtitle:'所有關鍵數值都可追溯來源',titleAlign:'left',titleScale:100,homeColumns:3,homeFields:['marketValue','costPnl','cost','monthlyCashflow'],homeFieldSpans:{marketValue:6,costPnl:3,cost:3,monthlyCashflow:6},homeSelectedSymbols:[],etfTemplateFields:['price','shares','marketValue','costPnl','costPnlPct','cumulativeDividend'],etfTemplateFieldSpans:{price:3,shares:3,marketValue:3,costPnl:3,costPnlPct:3,cumulativeDividend:3},etfTemplateSelectedSymbols:[],holdingColumns:3,holdingFields:['shares','avgCost','price','pnl','pnlPct','buyFee'],holdingFieldSpans:{shares:2,avgCost:2,price:2,pnl:3,pnlPct:3,buyFee:2},pageLayouts:{},fontScale:100,compactCards:false,wrapText:true,autoCardHeight:true,cardRadius:12,cardPadding:14,backgroundImageUri:'',backgroundImageOpacity:100,backgroundOverlay:8,themePreset:'clean',cardOpacity:92,cardTint:'#FFFFFF',cardBackgroundImageUri:'',cardBackgroundImageOpacity:22,primaryTextColor:'#0B2B4B',secondaryTextColor:'#6F8297',accentColor:'#12A875',positiveColor:'#E54A45',negativeColor:'#12A875',autoContrast:true,globalTextAlign:'left',moduleAppearance:{}},
+};
+
+const finiteOr=(value:unknown,fallback=0)=>{const n=Number(value);return Number.isFinite(n)?n:fallback;};
+function normalizeDailySnapshot(raw:any):DailySnapshot{
+ const marketValue=finiteOr(raw?.marketValue);
+ const cashBalance=raw?.cashBalance==null?undefined:finiteOr(raw.cashBalance);
+ const totalAssets=raw?.totalAssets==null?(cashBalance==null?undefined:marketValue+cashBalance):finiteOr(raw.totalAssets);
+ const currentCashBasis=raw?.currentCashBasis!=null?finiteOr(raw.currentCashBasis):finiteOr(raw?.totalCost);
+ const cashUnrealizedPnl=raw?.cashUnrealizedPnl!=null?finiteOr(raw.cashUnrealizedPnl):finiteOr(raw?.costPnl);
+ return {
+  id:String(raw?.id??('snapshot-'+String(raw?.date??''))),
+  date:String(raw?.date??''),
+  createdAt:finiteOr(raw?.createdAt,Date.now()),
+  marketValue,cashBalance,totalAssets,totalCost:currentCashBasis,
+  historicalTradeCost:raw?.historicalTradeCost==null?undefined:finiteOr(raw.historicalTradeCost),
+  historicalBuyFees:raw?.historicalBuyFees==null?undefined:finiteOr(raw.historicalBuyFees),
+  historicalCashOutflow:raw?.historicalCashOutflow==null?undefined:finiteOr(raw.historicalCashOutflow),
+  currentTradeCost:raw?.currentTradeCost==null?undefined:finiteOr(raw.currentTradeCost),
+  currentCashBasis,
+  pricePnl:raw?.pricePnl==null?undefined:finiteOr(raw.pricePnl),
+  cashUnrealizedPnl,
+  todayPnl:finiteOr(raw?.todayPnl),
+  todayPnlPct:finiteOr(raw?.todayPnlPct),
+  costPnl:cashUnrealizedPnl,
+  costPnlPct:finiteOr(raw?.costPnlPct),
+  totalPnl:finiteOr(raw?.totalPnl),
+  totalPnlPct:finiteOr(raw?.totalPnlPct),
+  cumulativeDividend:finiteOr(raw?.cumulativeDividend),
+  holdings:Array.isArray(raw?.holdings)?raw.holdings.map((h:any)=>({symbol:String(h?.symbol??''),shares:Math.max(0,finiteOr(h?.shares)),price:Math.max(0,finiteOr(h?.price)),marketValue:finiteOr(h?.marketValue),todayPnl:finiteOr(h?.todayPnl),totalPnl:finiteOr(h?.totalPnl)})).filter((h:any)=>h.symbol&&h.shares>0):[],
+ };
+}
+export async function loadAppState():Promise<PersistedAppState|null>{try{const raw=await AsyncStorage.getItem(KEY); if(!raw)return null; const parsed=JSON.parse(raw) as Partial<PersistedAppState>; if(!Array.isArray(parsed.holdings))return null; return migrate(parsed);}catch{return null;}}
+function migrate(input:Partial<PersistedAppState>):PersistedAppState{
+ const oldSchema=Number(input.schemaVersion??0);
+ const convertSpans=(raw:any, defaults:Record<string,LayoutSpan>)=>{const src={...defaults,...(raw??{})}; const out:Record<string,LayoutSpan>={}; for(const [k,v0] of Object.entries(src)){const v=Number(v0); out[k]=(oldSchema<9?(v===3?6:v===2?3:2):(v===6?6:v===3?3:2)) as LayoutSpan;} return out;};
+ const settings:AppSettings={widget:{...defaultAppSettings.widget,...(input.settings?.widget??{}),displayFields:Array.isArray(input.settings?.widget?.displayFields)?input.settings!.widget!.displayFields!:defaultAppSettings.widget.displayFields,selectedSymbols:Array.isArray(input.settings?.widget?.selectedSymbols)?input.settings!.widget!.selectedSymbols!:[]},ota:{...defaultAppSettings.ota,...(input.settings?.ota??{})},goals:{...defaultAppSettings.goals,...(input.settings?.goals??{})},closeNotification:{...defaultAppSettings.closeNotification,...(input.settings?.closeNotification??{})},layout:{...defaultAppSettings.layout,...(input.settings?.layout??{}),homeFields:Array.isArray(input.settings?.layout?.homeFields)?input.settings!.layout!.homeFields!:defaultAppSettings.layout.homeFields,homeFieldSpans:convertSpans(input.settings?.layout?.homeFieldSpans,defaultAppSettings.layout.homeFieldSpans),homeSelectedSymbols:Array.isArray(input.settings?.layout?.homeSelectedSymbols)?input.settings!.layout!.homeSelectedSymbols!:[],etfTemplateFields:Array.isArray((input.settings?.layout as any)?.etfTemplateFields)?(input.settings!.layout as any).etfTemplateFields:defaultAppSettings.layout.etfTemplateFields,etfTemplateFieldSpans:convertSpans((input.settings?.layout as any)?.etfTemplateFieldSpans,defaultAppSettings.layout.etfTemplateFieldSpans),etfTemplateSelectedSymbols:Array.isArray((input.settings?.layout as any)?.etfTemplateSelectedSymbols)?(input.settings!.layout as any).etfTemplateSelectedSymbols:[],holdingFields:Array.isArray(input.settings?.layout?.holdingFields)?input.settings!.layout!.holdingFields!:defaultAppSettings.layout.holdingFields,holdingFieldSpans:convertSpans(input.settings?.layout?.holdingFieldSpans,defaultAppSettings.layout.holdingFieldSpans),pageLayouts:(input.settings?.layout?.pageLayouts&&typeof input.settings.layout.pageLayouts==='object')?input.settings.layout.pageLayouts:{}}};
+ return {schemaVersion:STORAGE_SCHEMA_VERSION,holdings:input.holdings??[],dividendEvents:Array.isArray(input.dividendEvents)?input.dividendEvents:[],settings,dailySnapshots:Array.isArray(input.dailySnapshots)?input.dailySnapshots.map(normalizeDailySnapshot):[],savedAt:input.savedAt??Date.now()};
+}
+export async function saveAppState(state:Omit<PersistedAppState,'schemaVersion'|'savedAt'>){const payload:PersistedAppState={...state,dailySnapshots:(state.dailySnapshots??[]).map(normalizeDailySnapshot),schemaVersion:STORAGE_SCHEMA_VERSION,savedAt:Date.now()}; await AsyncStorage.setItem(KEY,JSON.stringify(payload)); await AsyncStorage.setItem(APP_INITIALIZED_KEY,'1');}
+export async function hasInitializedApp(){return (await AsyncStorage.getItem(APP_INITIALIZED_KEY))==='1';}
+export async function hasStoredAppState(){return (await AsyncStorage.getItem(KEY))!==null;}
+export async function markInitializedApp(){await AsyncStorage.setItem(APP_INITIALIZED_KEY,'1');}
+export async function exportAppStateText(){return (await AsyncStorage.getItem(KEY))??'';}
