@@ -388,6 +388,11 @@ export function LedgerScreen({
           </Text>
         </View>
 
+        {common.prefs.ai.enabled && common.prefs.ai.showHeaderButton && common.onAi ? (
+          <Pressable onPress={common.onAi} style={styles.settingsButton}>
+            <Text style={styles.settingsButtonText}>✦</Text>
+          </Pressable>
+        ) : null}
         <Pressable onPress={onSettings} style={styles.settingsButton}>
           <Text style={styles.settingsButtonText}>⚙</Text>
         </Pressable>
