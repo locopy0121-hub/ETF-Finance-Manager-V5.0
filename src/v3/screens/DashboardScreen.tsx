@@ -16,6 +16,8 @@ import {
 } from '../engine';
 import { HeroAssetCard } from '../components/HeroAssetCard';
 import { V3_THEME, resolvePnlTone } from '../theme';
+import { PageFrame, pageFieldEnabled } from '../pageRuntime';
+import { scaledFont } from '../blueprintB';
 import type { ScreenCommon } from '../screensBase';
 
 type DashboardScreenProps = {
@@ -24,6 +26,8 @@ type DashboardScreenProps = {
   onOpenDividend: () => void;
   onOpenLedger: () => void;
   onOpenCalculator: () => void;
+  onOpenMarket: () => void;
+  onSettings: () => void;
 };
 
 type GridRow = {
@@ -123,6 +127,8 @@ export function DashboardScreen({
   onOpenDividend,
   onOpenLedger,
   onOpenCalculator,
+  onOpenMarket,
+  onSettings,
 }: DashboardScreenProps) {
   const {
     holdings,
@@ -238,14 +244,9 @@ export function DashboardScreen({
   const hidden = prefs.privacyMode;
 
   const detachGridMonitor = () => {
-    common.onMonitoringChange?.({
-      ...prefs.monitoring,
-      gridMonitor: {
-        ...prefs.monitoring.gridMonitor,
-        enabled: true,
-        isFloating: true,
-        columns: 2,
-      },
+    common.onGridMonitorChange?.({
+      enabled: true,
+      isFloating: true,
     });
   };
 
@@ -255,16 +256,25 @@ export function DashboardScreen({
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.welcome}>
-        <Text style={styles.eyebrow}>ETF 財務管家</Text>
-        <Text style={styles.title}>歡迎回來</Text>
-        <Text style={styles.subtitle}>
-          今天也用清楚的數據，穩定累積你的資產。
-        </Text>
+      <View style={styles.welcomeRow}>
+        <View style={styles.welcome}>
+          <Text style={styles.eyebrow}>ETF 財務管家</Text>
+          <Text style={[styles.title, { fontSize: scaledFont(24, prefs) }]}>歡迎回來</Text>
+          <Text style={styles.subtitle}>
+            今天也用清楚的數據，穩定累積你的資產。
+          </Text>
+        </View>
+        <Pressable onPress={onSettings} style={styles.gearButton}>
+          <Text style={styles.gearButtonText}>⚙</Text>
+        </Pressable>
       </View>
 
-      <HeroAssetCard portfolio={portfolio} market="TW" />
+      <PageFrame prefs={prefs} page="dashboard" cardId="dashboard-core-1">
+        <HeroAssetCard portfolio={portfolio} market="TW" />
+      </PageFrame>
 
+      {prefs.visibility.dividends && pageFieldEnabled(prefs, 'dashboard', 'cumulativeDividends') ? (
+      <PageFrame prefs={prefs} page="dashboard" cardId="dashboard-core-3">
       <View style={styles.doubleColumn}>
         <StatCard
           label="年領股息"
@@ -277,6 +287,8 @@ export function DashboardScreen({
           accent={V3_THEME.colors.primary}
         />
       </View>
+      </PageFrame>
+      ) : null}
 
       <View style={styles.disciplineCard}>
         <View style={styles.disciplineIcon}>
@@ -299,6 +311,7 @@ export function DashboardScreen({
           ['股息月曆', onOpenDividend],
           ['智慧記帳', onOpenLedger],
           ['情境模擬', onOpenCalculator],
+          ['市場總覽', onOpenMarket],
         ].map(([label, onPress]) => (
           <Pressable
             key={label as string}
@@ -310,6 +323,7 @@ export function DashboardScreen({
         ))}
       </View>
 
+      <PageFrame prefs={prefs} page="dashboard" cardId="dashboard-holdings">
       <View style={styles.sectionHeader}>
         <View>
           <Text style={styles.sectionTitle}>主要持倉</Text>
@@ -356,8 +370,10 @@ export function DashboardScreen({
           );
         })}
       </View>
+      </PageFrame>
 
       {gridMonitor.enabled && gridMonitor.showInHome ? (
+        <PageFrame prefs={prefs} page="dashboard" cardId="dashboard-grid-monitor">
         <View style={styles.gridMonitorSection}>
           <View style={styles.gridMonitorHeader}>
             <View>
@@ -460,6 +476,7 @@ export function DashboardScreen({
             }}
           />
         </View>
+        </PageFrame>
       ) : null}
     </ScrollView>
   );
@@ -475,9 +492,12 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 120,
   },
-  welcome: {
+  welcomeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  welcome: { flex: 1,
     marginBottom: 16,
   },
+  gearButton: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  gearButtonText: { color: '#0066FF', fontSize: 17 },
   eyebrow: {
     color: V3_THEME.colors.primary,
     fontSize: 11,
