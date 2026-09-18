@@ -253,10 +253,10 @@ export function makeDefaultPageLayouts(homeCards:HomeMetricKey[][]=[['totalAsset
  const text=(align:V3CardAlign='left'):V3TextConfig=>({visible:true,fontScale:100,fontWeight:'800',align,verticalAlign:'top'});
  const field=(span:V3CardSpan=6):V3FieldConfig=>({span,height:'auto',label:{...text('left'),lineHeightScale:125},value:{...text('left'),fontWeight:'900',verticalAlign:'bottom',lineHeightScale:125},labelValueGap:6,backgroundOpacity:3,radius:10,padding:8,paddingTop:8,paddingRight:8,paddingBottom:8,paddingLeft:8});
  const card=(id:string,title:string,fields:string[],x:number,y:number,w:number,h:number):V3PageCard=>({id,title,kind:'system',fields:[...fields],fieldSpans:Object.fromEntries(fields.map(k=>[k,6])) as Record<string,V3CardSpan>,fieldConfigs:Object.fromEntries(fields.map(k=>[k,field(6)])) as Record<string,V3FieldConfig>,x,y,w,h,hidden:false,style:{...style}});
- const hero=card('dashboard-core-1','總資產與核心指標',homeCards[0]??['totalAssets','todayPnl','todayPnlPct'],0,0,6,3);
+ const hero=card('dashboard-core-1','總資產與核心指標',['totalAssets','todayPnl','totalPnl'],0,0,6,3);
  hero.chartConfig={enabled:true,source:'intraday',metric:'totalAssets',range:120,showPoints:false,showZeroLine:false,chartType:'area',layout:'dataLeftChartRight',dataRatio:'1/2'};
  return {
-  dashboard:{columns:6,cards:[hero,card('dashboard-core-3','損益與股息',homeCards[2]??[],0,3,6,2),{...card('dashboard-actions','紀律投資與快捷入口',[],0,5,6,2),role:'module'},{...card('dashboard-holdings','主要持倉',[],0,7,6,2),role:'module'},{...card('dashboard-grid-monitor','雙欄宮格監控',[],0,9,6,2),role:'module'}]},
+  dashboard:{columns:6,cards:[hero,card('dashboard-core-3','損益與股息',['cumulativeDividends'],0,3,6,2),{...card('dashboard-actions','紀律投資與快捷入口',[],0,5,6,2),role:'module'},{...card('dashboard-holdings','主要持倉',[],0,7,6,2),role:'module'},{...card('dashboard-grid-monitor','雙欄宮格監控',[],0,9,6,2),role:'module'}]},
   ledger:{columns:6,cards:[card('ledger-summary','智慧記帳摘要',pageFields.ledger??[],0,0,6,2),{...card('ledger-form','記帳表單',[],0,2,6,4),role:'module'},{...card('ledger-records','最近帳務紀錄',[],0,6,6,3),role:'module'}]},
   portfolio:{columns:6,cards:[{...card('portfolio-allocation','ETF 市值配置',[],0,0,6,2),role:'module'},{...card('portfolio-list','庫存清單模板',pageFields.portfolio??[],0,2,6,3),role:'listTemplate'}]},
   dividend:{columns:6,cards:[card('dividend-summary','股息摘要',pageFields.dividend??[],0,0,6,2),{...card('dividend-calendar','股息月曆',[],0,2,6,4),role:'module'},{...card('dividend-events','股息事件明細',[],0,6,6,3),role:'module'}]},
