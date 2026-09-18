@@ -22,6 +22,7 @@ type PortfolioScreenProps = {
   onOpenHolding?: (symbol: string) => void;
   onAdd?: () => void;
   onSettings?: () => void;
+  onManageHolding?: (symbol: string) => void;
 };
 
 type HoldingRow = {
@@ -114,6 +115,7 @@ export function PortfolioScreen({
   onOpenHolding,
   onAdd,
   onSettings,
+  onManageHolding,
 }: PortfolioScreenProps) {
   const [tab, setTab] = useState<PortfolioTab>('all');
 
@@ -274,7 +276,7 @@ export function PortfolioScreen({
       <PageFrame prefs={common.prefs} page="portfolio" cardId="portfolio-list">
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>持股清單</Text>
-        <Text style={styles.sectionMeta}>{filteredRows.length} 檔</Text>
+        <Text style={styles.sectionMeta}>{filteredRows.length} 檔 · 長按可管理</Text>
       </View>
 
       <View style={styles.list}>
@@ -284,6 +286,8 @@ export function PortfolioScreen({
             <Pressable
               key={row.symbol}
               onPress={() => onOpenHolding?.(row.symbol)}
+              onLongPress={() => onManageHolding?.(row.symbol)}
+              delayLongPress={420}
               style={styles.holdingCard}
             >
               <View style={styles.cardTop}>
