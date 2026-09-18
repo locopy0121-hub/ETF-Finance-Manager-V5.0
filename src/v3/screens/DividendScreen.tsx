@@ -16,6 +16,7 @@ type DividendScreenProps = {
   common: ScreenCommon;
   onEditEvent?: (id: string) => void;
   onMarkPaid?: (id: string) => void;
+  onDeleteEvent?: (id: string) => void;
   onSettings?: () => void;
 };
 
@@ -70,6 +71,7 @@ export function DividendScreen({
   common,
   onEditEvent,
   onMarkPaid,
+  onDeleteEvent,
   onSettings,
 }: DividendScreenProps) {
   const initialDate = new Date();
@@ -181,7 +183,6 @@ export function DividendScreen({
   const calendarText = calendar.followTheme ? '#0F172A' : calendar.textColor;
   const calendarBackground = calendar.followTheme ? '#FFFFFF' : calendar.backgroundColor;
   const calendarWeekend = calendar.followTheme ? '#EF4444' : calendar.weekendColor;
-  const calendarEvent = calendar.followTheme ? '#0066FF' : calendar.eventColor;
   const markerStyle =
     calendar.eventStyle === 'underline'
       ? { width: 10, height: 2, borderRadius: 1 }
@@ -567,7 +568,7 @@ export function DividendScreen({
                   </View>
                 </View>
 
-                {onEditEvent ||
+                {onEditEvent || onDeleteEvent ||
                 (!paid && onMarkPaid && isPayDate) ? (
                   <View style={styles.actionRow}>
                     {onEditEvent ? (
@@ -576,6 +577,14 @@ export function DividendScreen({
                         style={styles.editButton}
                       >
                         <Text style={styles.editButtonText}>編輯事件</Text>
+                      </Pressable>
+                    ) : null}
+                    {onDeleteEvent ? (
+                      <Pressable
+                        onPress={() => onDeleteEvent(event.id)}
+                        style={styles.deleteEventButton}
+                      >
+                        <Text style={styles.deleteEventButtonText}>刪除事件</Text>
                       </Pressable>
                     ) : null}
 
@@ -1101,6 +1110,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '900',
   },
+  deleteEventButton: { minHeight: 40, borderRadius: 12, borderWidth: 1, borderColor: '#FECACA', backgroundColor: '#FEF2F2', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
+  deleteEventButtonText: { color: '#DC2626', fontSize: 10, fontWeight: '900' },
   confirmButton: {
     flex: 1,
     minHeight: 42,
