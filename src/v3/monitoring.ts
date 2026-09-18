@@ -1,3 +1,4 @@
+import { PAGE_KEYS, type PageFieldKey } from './pageRegistry';
 export type MonitorDisplayMode='miniPnl'|'holdingList'|'dualColumn'|'cardMatrix'|'todayPnl'|'totalAssets'|'dividendReminder'|'watchlist'|'marketOverview'|'singleEtf'|'aiSummary'|'breathingLight';
 export type MonitorSymbolSource='holdings'|'watchlist'|'all';
 export type MonitorResizeMode='fluid'|'scale';
@@ -47,7 +48,7 @@ export type UnifiedMonitorPreferences={
  floating:MonitorProfile;
  widget:MonitorProfile;
  gridMonitor:GridMonitorPreferences;
- pageCustomize:Record<'dashboard'|'ledger'|'portfolio'|'dividend'|'calculator'|'detail',boolean>;
+ pageCustomize:Record<PageFieldKey,boolean>;
 };
 export const defaultMonitorFields:MonitorField[]=['symbol','price','changePct','todayPnl'];
 export const makeMonitorProfile=(kind:'app'|'floating'|'widget'):MonitorProfile=>({
@@ -63,19 +64,30 @@ export const defaultUnifiedMonitorPreferences:UnifiedMonitorPreferences={
  floating:{...makeMonitorProfile('floating'),enabled:false},
  widget:{...makeMonitorProfile('widget'),enabled:true,width:320,height:180,dockMode:'none',dragHotspot:'all'},
  gridMonitor:{...defaultGridMonitorPreferences},
- pageCustomize:{dashboard:false,ledger:false,portfolio:false,dividend:false,calculator:false,detail:false}
+ pageCustomize:Object.fromEntries(PAGE_KEYS.map(page=>[page,false])) as Record<PageFieldKey,boolean>
 };
+export function normalizeGridMonitor(current:GridMonitorPreferences,patch:Partial<GridMonitorPreferences>):GridMonitorPreferences{
+ const next:GridMonitorPreferences={
+  ...current,
+  ...patch,
+  columns:2,
+  alertThreshold:Math.max(0,Number(patch.alertThreshold??current.alertThreshold)||0),
+ };
+ if(patch.isFloating===true){next.enabled=true;next.isFloating=true;next.showInHome=false;}
+ if(patch.showInHome===true){next.enabled=true;next.showInHome=true;next.isFloating=false;}
+ if(patch.enabled===false){next.enabled=false;next.isFloating=false;next.showInHome=false;}
+ return next;
+}
+
 export function mergeMonitorProfile(base:MonitorProfile,raw:any):MonitorProfile{const legacyMode:Record<string,MonitorDisplayMode>={smart:'holdingList',list:'holdingList',puzzle:'cardMatrix'};const merged={...base,...(raw??{}),displayMode:legacyMode[raw?.displayMode]??raw?.displayMode??base.displayMode,selectedSymbols:Array.isArray(raw?.selectedSymbols)?raw.selectedSymbols:base.selectedSymbols,fields:Array.isArray(raw?.fields)?raw.fields:base.fields,fieldsCustomized:raw?.fieldsCustomized===true,puzzleTiles:Array.isArray(raw?.puzzleTiles)?raw.puzzleTiles:base.puzzleTiles,fieldStyles:{...base.fieldStyles,...(raw?.fieldStyles??{})},schedule:{...base.schedule,...(raw?.schedule??{})}};if(merged.tapAction==='openApp')merged.tapAction='none';return merged;}
 export function mergeUnifiedMonitorPreferences(raw:any):UnifiedMonitorPreferences{return {
  appBoard:mergeMonitorProfile(defaultUnifiedMonitorPreferences.appBoard,raw?.appBoard),
  floating:mergeMonitorProfile(defaultUnifiedMonitorPreferences.floating,raw?.floating),
  widget:mergeMonitorProfile(defaultUnifiedMonitorPreferences.widget,raw?.widget),
- gridMonitor:{
-  ...defaultGridMonitorPreferences,
+ gridMonitor:normalizeGridMonitor(defaultGridMonitorPreferences,{
   ...(raw?.gridMonitor??{}),
-  columns:2,
   autoSortBy:['changePercent','price','volume','custom'].includes(raw?.gridMonitor?.autoSortBy)?raw.gridMonitor.autoSortBy:defaultGridMonitorPreferences.autoSortBy,
   alertThreshold:Math.max(0,Number(raw?.gridMonitor?.alertThreshold??defaultGridMonitorPreferences.alertThreshold)||0),
- },
+ }),
  pageCustomize:{...defaultUnifiedMonitorPreferences.pageCustomize,...(raw?.pageCustomize??{})}
 };}
