@@ -191,7 +191,7 @@ export function AIScreen({ common, onSettings }: AIScreenProps) {
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.eyebrow}>AI RESEARCH</Text>
-          <Text style={[styles.title, { fontSize: scaledFont(24, common.prefs) }]}>AI 助理</Text>
+          <Text style={styles.title}>AI 助理</Text>
           <Text style={styles.subtitle}>公開資訊、新聞、總經與除權息即時查詢</Text>
         </View>
         {onSettings ? (
