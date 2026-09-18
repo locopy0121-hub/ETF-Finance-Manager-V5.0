@@ -30,7 +30,7 @@ export function pageCardVisible(prefs: V3Preferences, page: PageFieldKey, cardId
 }
 
 export function pageCardOrder(prefs: V3Preferences, page: PageFieldKey, cardId: string, fallback = 999) {
-  const cards = [...(prefs.pageLayouts?.[page]?.cards ?? [])].sort((a, b) => a.y - b.y || a.x - b.x);
+  const cards = prefs.pageLayouts?.[page]?.cards ?? [];
   const index = cards.findIndex(item => item.id === cardId);
   return index >= 0 ? index : fallback;
 }
@@ -52,15 +52,12 @@ export function PageFrame({
 }) {
   // Settings must remain recoverable even if its own frame is accidentally hidden.
   if (page !== 'settings' && !pageCardVisible(prefs, page, cardId)) return null;
-  const card = prefs.pageLayouts?.[page]?.cards?.find(item => item.id === cardId);
-  const opacity = Math.max(0.35, Math.min(1, Number(card?.style?.backgroundOpacity ?? 100) / 100));
   return (
     <View
       style={[
         {
           order: pageCardOrder(prefs, page, cardId, fallbackOrder),
-          opacity,
-        },
+        } as ViewStyle,
         style,
       ]}
     >
