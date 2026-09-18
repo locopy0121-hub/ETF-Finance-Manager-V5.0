@@ -10,7 +10,8 @@ const TOTAL_PNL_FIELDS = new Set(['totalPnl', 'totalRoi', 'pricePnl', 'unrealize
 const DIVIDEND_FIELDS = new Set(['cumulativeDividends', 'cumulativeDividend', 'pendingDividends', 'pendingDividend', 'yearReceived', 'yearExpected', 'monthlyAverage', 'nextPayDate', 'nextExDate', 'eligibleShares', 'costYield', 'eventCount', 'annualDividend']);
 
 export function isGlobalFieldVisible(prefs: V3Preferences, key: string) {
-  if ((key === 'nav' || key === 'premium') && !prefs.visibility.premium) return false;
+  if (key === 'nav' && !prefs.visibility.nav) return false;
+  if (key === 'premium' && !prefs.visibility.premium) return false;
   if (QUOTE_FIELDS.has(key) && !prefs.visibility.liveQuote) return false;
   if (TODAY_FIELDS.has(key) && !prefs.visibility.todayPnl) return false;
   if (TOTAL_PNL_FIELDS.has(key) && !prefs.visibility.totalPnl) return false;
