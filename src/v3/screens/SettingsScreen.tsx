@@ -1917,20 +1917,6 @@ export function SettingsScreen({
                     onChange({ ai: { ...prefs.ai, showHeaderButton } })
                   }
                 />
-                <SettingToggle
-                  label="AI 寫入前確認"
-                  value={prefs.ai.confirmWrites}
-                  onChange={confirmWrites =>
-                    onChange({ ai: { ...prefs.ai, confirmWrites } })
-                  }
-                />
-                <SettingToggle
-                  label="啟用本機語意解析"
-                  value={prefs.ai.localParser}
-                  onChange={localParser =>
-                    onChange({ ai: { ...prefs.ai, localParser } })
-                  }
-                />
                 <InlineNumber
                   label="AI 文字大小"
                   value={prefs.ai.fontScale}
