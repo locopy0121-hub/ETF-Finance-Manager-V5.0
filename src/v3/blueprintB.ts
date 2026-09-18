@@ -23,6 +23,11 @@ export const BLUEPRINT_B = {
 export function resolveBlueprintBPreferences(prefs: V3Preferences): V3Preferences {
   return {
     ...prefs,
+    themeId: 'glacierLight',
+    backgroundPreset: 'custom',
+    backgroundImageUri: '',
+    cardBackgroundImageUri: '',
+    cardBackgroundImageOpacity: 0,
     primaryTextColor: BLUEPRINT_B.textPrimary,
     secondaryTextColor: BLUEPRINT_B.textSecondary,
     accentColor: BLUEPRINT_B.primary,
