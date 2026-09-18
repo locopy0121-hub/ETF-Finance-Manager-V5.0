@@ -50,6 +50,7 @@ export function MarketScreen({ common, onSettings, onOpenHolding }: MarketScreen
     [symbols.join('|'), holdings, quotes, ledger, dividends],
   );
 
+  const showSymbol = pageFieldEnabled(prefs, 'market', 'symbol', 'market-main');
   const showPrice = pageFieldEnabled(prefs, 'market', 'price', 'market-main');
   const showChange = pageFieldEnabled(prefs, 'market', 'changePct', 'market-main');
   const showVolume = pageFieldEnabled(prefs, 'market', 'volume', 'market-main');
@@ -81,9 +82,11 @@ export function MarketScreen({ common, onSettings, onOpenHolding }: MarketScreen
                 onPress={() => onOpenHolding?.(row.symbol)}
                 style={styles.row}
               >
-                <View style={styles.symbolPill}>
-                  <Text style={styles.symbolText}>{row.symbol}</Text>
-                </View>
+                {showSymbol ? (
+                  <View style={styles.symbolPill}>
+                    <Text style={styles.symbolText}>{row.symbol}</Text>
+                  </View>
+                ) : null}
                 <View style={styles.identity}>
                   <Text style={styles.name}>{row.name}</Text>
                   {showVolume ? (
