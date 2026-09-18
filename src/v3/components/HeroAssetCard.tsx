@@ -29,12 +29,18 @@ export type HeroAssetCardProps = {
   market?: MarketColorMode;
   style?: ViewStyle;
   currencyLabel?: string;
+  showTotalAssets?: boolean;
+  showTodayPnl?: boolean;
+  showTotalPnl?: boolean;
+  fontScale?: number;
+  privacyMode?: boolean;
 };
 
 type PnlBadgeProps = {
   label: string;
   value: number;
   market: MarketColorMode;
+  hidden?: boolean;
 };
 
 const money = (value: number) =>
@@ -46,14 +52,14 @@ const signedMoney = (value: number) => {
   return `${sign}${money(Math.abs(safe))}`;
 };
 
-function PnlBadge({ label, value, market }: PnlBadgeProps) {
+function PnlBadge({ label, value, market, hidden }: PnlBadgeProps) {
   const tone = resolvePnlTone(value, market);
 
   return (
     <View style={[styles.badge, { backgroundColor: tone.background }]}>
       <Text style={styles.badgeLabel}>{label}</Text>
       <Text style={[styles.badgeValue, { color: tone.foreground }]}>
-        {signedMoney(value)}
+        {hidden ? '••••' : signedMoney(value)}
       </Text>
     </View>
   );
@@ -73,8 +79,15 @@ export function HeroAssetCard({
   market = 'TW',
   style,
   currencyLabel = 'TWD',
+  showTotalAssets = true,
+  showTodayPnl = true,
+  showTotalPnl = true,
+  fontScale = 100,
+  privacyMode = false,
 }: HeroAssetCardProps) {
-  const [hidden, setHidden] = useState(false);
+  const [localHidden, setLocalHidden] = useState(false);
+  const hidden = privacyMode || localHidden;
+  const scale = Math.max(0.8, Math.min(1.6, fontScale / 100));
 
   const assetText = hidden ? '＊＊＊＊＊＊' : money(portfolio.totalAssets);
 
@@ -100,18 +113,13 @@ export function HeroAssetCard({
         style={StyleSheet.absoluteFill}
       >
         <Defs>
-          <LinearGradient id="heroBackground" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor={V3_THEME.colors.heroGradientStart} />
-            <Stop offset="1" stopColor={V3_THEME.colors.heroGradientEnd} />
-          </LinearGradient>
-
           <LinearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.22} />
-            <Stop offset="1" stopColor={V3_THEME.colors.accent} stopOpacity={0.01} />
+            <Stop offset="0" stopColor="#0066FF" stopOpacity={0.14} />
+            <Stop offset="1" stopColor="#0066FF" stopOpacity={0.01} />
           </LinearGradient>
         </Defs>
 
-        <Rect x="0" y="0" width="360" height="210" rx="16" fill="url(#heroBackground)" />
+        <Rect x="0" y="0" width="360" height="210" rx="16" fill="#FFFFFF" />
 
         <Path
           d={fillPath}
@@ -123,7 +131,7 @@ export function HeroAssetCard({
           d={chartPath}
           transform="translate(82 78)"
           fill="none"
-          stroke="#FFFFFF"
+          stroke="#0066FF"
           strokeWidth={2.4}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -131,48 +139,58 @@ export function HeroAssetCard({
         />
       </Svg>
 
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.eyebrow}>總資產 ({currencyLabel})</Text>
-          <View style={styles.valueRow}>
-            <Text
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.72}
-              style={styles.heroValue}
-            >
-              {assetText}
-            </Text>
+      {showTotalAssets ? (
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={[styles.eyebrow, { fontSize: 10 * scale }]}>總資產 ({currencyLabel})</Text>
+            <View style={styles.valueRow}>
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.72}
+                style={[styles.heroValue, { fontSize: 34 * scale }]}
+              >
+                {assetText}
+              </Text>
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={hidden ? '顯示總資產' : '隱藏總資產'}
-              hitSlop={10}
-              onPress={() => setHidden(v => !v)}
-              style={({ pressed }) => [
-                styles.eyeButton,
-                pressed && styles.eyeButtonPressed,
-              ]}
-            >
-              <Text style={styles.eyeIcon}>{hidden ? '◎' : '◉'}</Text>
-            </Pressable>
+              {!privacyMode ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={hidden ? '顯示總資產' : '隱藏總資產'}
+                  hitSlop={10}
+                  onPress={() => setLocalHidden(v => !v)}
+                  style={({ pressed }) => [
+                    styles.eyeButton,
+                    pressed && styles.eyeButtonPressed,
+                  ]}
+                >
+                  <Text style={styles.eyeIcon}>{hidden ? '◎' : '◉'}</Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
         </View>
-      </View>
+      ) : null}
 
       <View style={styles.spacer} />
 
       <View style={styles.badgeRow}>
-        <PnlBadge
-          label="今日損益"
-          value={portfolio.todayPnl}
-          market={market}
-        />
-        <PnlBadge
-          label="累積損益"
-          value={portfolio.totalPnl}
-          market={market}
-        />
+        {showTodayPnl ? (
+          <PnlBadge
+            label="今日損益"
+            value={portfolio.todayPnl}
+            market={market}
+            hidden={hidden}
+          />
+        ) : null}
+        {showTotalPnl ? (
+          <PnlBadge
+            label="累積損益"
+            value={portfolio.totalPnl}
+            market={market}
+            hidden={hidden}
+          />
+        ) : null}
       </View>
     </View>
   );
@@ -184,7 +202,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: V3_THEME.radius.card,
     padding: V3_THEME.spacing.xl,
-    backgroundColor: V3_THEME.colors.heroGradientStart,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     ...V3_THEME.shadow,
   },
   headerRow: {
@@ -195,7 +215,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     ...V3_THEME.typography.helper,
-    color: 'rgba(255,255,255,0.78)',
+    color: '#64748B',
     marginBottom: V3_THEME.spacing.sm,
   },
   valueRow: {
@@ -214,8 +234,8 @@ const styles = StyleSheet.create({
     marginLeft: V3_THEME.spacing.sm,
     borderRadius: 17,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.26)',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderColor: '#E2E8F0',
+    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -223,7 +243,7 @@ const styles = StyleSheet.create({
     opacity: 0.68,
   },
   eyeIcon: {
-    color: '#FFFFFF',
+    color: '#0066FF',
     fontSize: 16,
     fontWeight: '700',
   },
@@ -246,11 +266,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 7,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: '#E2E8F0',
   },
   badgeLabel: {
     ...V3_THEME.typography.helper,
-    color: 'rgba(255,255,255,0.78)',
+    color: '#64748B',
   },
   badgeValue: {
     fontSize: 13,
