@@ -16,7 +16,7 @@ import {
 } from '../engine';
 import { HeroAssetCard } from '../components/HeroAssetCard';
 import { V3_THEME, resolvePnlTone } from '../theme';
-import { PageFrame, pageFieldEnabled } from '../pageRuntime';
+import { PageFrame, PageFrameStack, pageFieldEnabled } from '../pageRuntime';
 import { scaledFont } from '../blueprintB';
 import type { ScreenCommon } from '../screensBase';
 
@@ -269,6 +269,7 @@ export function DashboardScreen({
         </Pressable>
       </View>
 
+      <PageFrameStack prefs={prefs} page="dashboard">
       <PageFrame prefs={prefs} page="dashboard" cardId="dashboard-core-1">
         <HeroAssetCard portfolio={portfolio} market="TW" />
       </PageFrame>
@@ -290,6 +291,7 @@ export function DashboardScreen({
       </PageFrame>
       ) : null}
 
+      <PageFrame prefs={prefs} page="dashboard" cardId="dashboard-actions">
       <View style={styles.disciplineCard}>
         <View style={styles.disciplineIcon}>
           <Text style={styles.disciplineIconText}>✓</Text>
@@ -322,6 +324,7 @@ export function DashboardScreen({
           </Pressable>
         ))}
       </View>
+      </PageFrame>
 
       <PageFrame prefs={prefs} page="dashboard" cardId="dashboard-holdings">
       <View style={styles.sectionHeader}>
@@ -478,6 +481,7 @@ export function DashboardScreen({
         </View>
         </PageFrame>
       ) : null}
+      </PageFrameStack>
     </ScrollView>
   );
 }
