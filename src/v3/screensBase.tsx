@@ -57,6 +57,9 @@ const pageFieldChoices:Record<PageFieldKey,Array<[string,string]>>={
  portfolio:[['shares','持有股數'],['avgCost','平均成交成本'],['pureCost','目前持有成交成本'],['totalFees','目前持有分攤手續費'],['totalCost','目前持有含費成本'],['historicalTradeCost','累積成交成本'],['historicalBuyFees','累積買進手續費'],['historicalCashOutflow','累積現金支出'],['price','最新行情'],['marketValue','目前市值'],['todayPnl','今日損益'],['todayPnlPct','今日損益 %'],['pnl','即時損益'],['roi','即時報酬率'],['cashPnl','即時損益（含費）'],['cashRoi','即時報酬率（含費）'],['weight','資產權重'],['cumulativeDividend','累積配息'],['lastBuyDate','最後買進日'],['broker','券商'],['account','帳戶']],
  dividend:[['cumulativeDividends','累積已領股息'],['yearReceived','今年已領'],['yearExpected','今年預估'],['monthlyAverage','平均每月被動收入'],['pendingDividend','待入帳股息'],['nextPayDate','下一次發放日'],['nextExDate','下一次除息日'],['eligibleShares','最近資格股數快照'],['costYield','整體 Cost Yield'],['eventCount','股息事件數']],
  calculator:[['sourceMode','試算起點'],['initialCapital','起始資產'],['currentSnapshotValue','目前庫存快照'],['monthlyContribution','每月投入'],['years','投資年期'],['annualReturn','年化報酬'],['annualDividendYield','年化配息率'],['invested','累積投入'],['futureValue','預估資產'],['cumulativeDividend','累積配息'],['pnl','預估損益'],['roi','預估 ROI']],
+ market:[['symbol','ETF 代號'],['price','最新行情'],['changePct','漲跌幅'],['volume','成交量']],
+ ai:[],
+ settings:[],
  detail:[['shares','持有股數'],['purchaseCount','買進筆數'],['pureCost','目前持有成交成本'],['totalFees','目前持有分攤手續費'],['totalCost','目前持有含費成本'],['historicalTradeCost','累積成交成本'],['historicalBuyFees','累積買進手續費'],['historicalCashOutflow','累積現金支出'],['avgCost','平均成交成本'],['cashAvgCost','含費平均成本'],['broker','券商'],['account','帳戶'],['lastBuyDate','最後買進日'],['price','最新行情'],['previousClose','昨收'],['open','開盤'],['high','最高'],['low','最低'],['volume','成交量'],['todayPnl','今日損益'],['todayPnlPct','今日損益 %'],['marketValue','目前市值'],['pnl','即時損益'],['roi','即時報酬率'],['cashPnl','即時損益（含費）'],['cashRoi','即時報酬率（含費）'],['realizedPricePnl','已實現價格損益'],['realizedCashPnl','已實現含費損益'],['cumulativeDividend','累積配息'],['annualDividend','每股年配息估值'],['costYield','Cost Yield'],['weight','資產權重'],['nav','NAV / 淨值'],['premium','折溢價'],['updatedAt','行情時間']],
 };
 const widgetChoices:Array<[WidgetField,string]>=[['totalPnl','累積總損益'],['totalPnlPct','累積總損益 %'],['todayPnl','今日損益'],['todayPnlPct','今日損益 %'],['marketValue','持股總市值'],['totalAssets','總資產'],['historicalTradeCost','累積成交成本'],['historicalBuyFees','累積買進手續費'],['historicalCashOutflow','累積現金支出'],['currentTradeCost','目前持有成交成本'],['currentCashBasis','目前持有含費成本'],['pricePnl','價格損益'],['cashUnrealizedPnl','含費未實現損益'],['cumulativeDividend','累積配息'],['monthDividend','本月配息'],['monthContribution','本月投入'],['holdingCount','持有檔數'],['etfPrice','ETF 行情'],['etfShares','ETF 股數'],['etfMarketValue','ETF 市值'],['etfTradeCost','ETF 成交成本'],['etfBuyFee','ETF 買進手續費'],['etfCashBasis','ETF 含費成本'],['etfTodayPnl','ETF 今日損益'],['etfPricePnl','ETF 價格損益'],['etfCashPnl','ETF 含費損益'],['etfReturn','ETF ROI'],['updatedAt','更新時間'],['marketState','市場狀態']];
@@ -157,8 +160,8 @@ export type HoldingEditPayload={symbol:string;records:PurchaseRecord[];targetWei
 export function PortfolioScreenV3({
  common,
  onSettings,
- onSaveHolding:_onSaveHolding,
- onDeleteHolding:_onDeleteHolding,
+ onSaveHolding,
+ onDeleteHolding,
  onAdd,
  onOpenHolding,
 }:{
@@ -218,7 +221,7 @@ export function DividendScreenV3({
  common,
  onSettings,
  onSaveEvent,
- onDeleteEvent:_onDeleteEvent,
+ onDeleteEvent,
  onMarkPaid,
 }:{
  common:ScreenCommon;
@@ -250,6 +253,7 @@ export function DividendScreenV3({
    common={common}
    onEditEvent={openEditor}
    onMarkPaid={openPayment}
+   onDeleteEvent={onDeleteEvent}
    onSettings={onSettings}
   />
 
