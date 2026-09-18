@@ -271,7 +271,15 @@ export function DashboardScreen({
 
       <PageFrameStack prefs={prefs} page="dashboard">
       <PageFrame prefs={prefs} page="dashboard" cardId="dashboard-core-1">
-        <HeroAssetCard portfolio={portfolio} market="TW" />
+        <HeroAssetCard
+          portfolio={portfolio}
+          market="TW"
+          showTotalAssets={pageFieldEnabled(prefs, 'dashboard', 'totalAssets')}
+          showTodayPnl={pageFieldEnabled(prefs, 'dashboard', 'todayPnl')}
+          showTotalPnl={pageFieldEnabled(prefs, 'dashboard', 'totalPnl')}
+          fontScale={prefs.fontScale}
+          privacyMode={prefs.privacyMode}
+        />
       </PageFrame>
 
       {prefs.visibility.dividends && pageFieldEnabled(prefs, 'dashboard', 'cumulativeDividends') ? (
