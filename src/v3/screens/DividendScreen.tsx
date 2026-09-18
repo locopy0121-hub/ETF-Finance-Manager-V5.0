@@ -242,7 +242,7 @@ export function DividendScreen({
         </View>
 
         <View style={styles.summaryMetaRow}>
-          {pageFieldEnabled(common.prefs, 'dividend', 'yearExpected') ? (
+          {pageFieldEnabled(common.prefs, 'dividend', 'yearExpected', 'dividend-summary') ? (
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>年度預估</Text>
               <Text style={styles.summaryValue}>
@@ -250,11 +250,11 @@ export function DividendScreen({
               </Text>
             </View>
           ) : null}
-          {pageFieldEnabled(common.prefs, 'dividend', 'yearExpected') &&
-          pageFieldEnabled(common.prefs, 'dividend', 'monthlyAverage') ? (
+          {pageFieldEnabled(common.prefs, 'dividend', 'yearExpected', 'dividend-summary') &&
+          pageFieldEnabled(common.prefs, 'dividend', 'monthlyAverage', 'dividend-summary') ? (
             <View style={styles.summaryDivider} />
           ) : null}
-          {pageFieldEnabled(common.prefs, 'dividend', 'monthlyAverage') ? (
+          {pageFieldEnabled(common.prefs, 'dividend', 'monthlyAverage', 'dividend-summary') ? (
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>平均月領</Text>
               <Text style={styles.summaryValue}>
