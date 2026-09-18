@@ -1325,7 +1325,7 @@ export function SettingsScreen({
     >
       <View style={styles.header}>
         <Text style={styles.eyebrow}>SETTINGS / PAGE FRAME EDITOR 2.0</Text>
-        <Text style={styles.pageTitle}>設定與頁面編輯器</Text>
+        <Text style={[styles.pageTitle, { fontSize: 24 * Math.max(.8, Math.min(1.6, prefs.fontScale / 100)) }]}>設定與頁面編輯器</Text>
         <Text style={styles.pageSubtitle}>
           Page Frame Editor 2.0 與舊版百寶箱功能統一收納；只改 UI、監控、通知與系統設定，不改金融計算。
         </Text>
@@ -1489,16 +1489,22 @@ export function SettingsScreen({
                         label="↓"
                         onPress={() => moveCard(index, 1)}
                       />
-                      <SmallAction
-                        label={card.hidden ? '顯示' : '隱藏'}
-                        onPress={() => toggleCardHidden(card.id)}
-                      />
-                      <Pressable
-                        onPress={() => setEditingCardId(card.id)}
-                        style={styles.gearButton}
-                      >
-                        <Text style={styles.gearText}>⚙️</Text>
-                      </Pressable>
+                      {selectedPage === 'settings' ? (
+                        <Text style={styles.fixedFrameText}>固定顯示</Text>
+                      ) : (
+                        <SmallAction
+                          label={card.hidden ? '顯示' : '隱藏'}
+                          onPress={() => toggleCardHidden(card.id)}
+                        />
+                      )}
+                      {card.role !== 'module' ? (
+                        <Pressable
+                          onPress={() => setEditingCardId(card.id)}
+                          style={styles.gearButton}
+                        >
+                          <Text style={styles.gearText}>⚙️</Text>
+                        </Pressable>
+                      ) : null}
                     </View>
                   ))}
                 </View>
@@ -2477,6 +2483,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
     color: V3_THEME.colors.textSecondary,
     fontSize: 10,
+  },
+  fixedFrameText: {
+    color: '#64748B',
+    fontSize: 9,
+    fontWeight: '800',
+    paddingHorizontal: 8,
   },
   gearButton: {
     width: 42,
