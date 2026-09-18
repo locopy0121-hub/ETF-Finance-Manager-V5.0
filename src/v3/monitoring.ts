@@ -53,7 +53,7 @@ export type UnifiedMonitorPreferences={
 export const defaultMonitorFields:MonitorField[]=['symbol','price','changePct','todayPnl'];
 export const makeMonitorProfile=(kind:'app'|'floating'|'widget'):MonitorProfile=>({
  enabled:kind!=='app'?false:true,customizeMode:false,displayMode:kind==='floating'?'holdingList':'cardMatrix',resizeMode:'fluid',symbolSource:'holdings',title:'即時監控器',statusTitle:'市場狀態',showBreathingLight:true,density:'auto',selectedSymbols:[],fields:[...defaultMonitorFields],fieldsCustomized:false,maxSymbols:10,sortMode:'custom',groupTabs:true,
- fontScale:100,fontWeight:'bold',colorMode:'tw',backgroundStyle:'glass',backgroundColor:'#08111F',activeOpacity:88,idleOpacity:36,radius:12,borderWidth:1,borderColor:'#3AC7FF',shadow:true,separators:true,zebra:false,
+ fontScale:100,fontWeight:'bold',colorMode:'tw',backgroundStyle:'solid',backgroundColor:'#FFFFFF',activeOpacity:100,idleOpacity:72,radius:16,borderWidth:1,borderColor:'#E2E8F0',shadow:true,separators:true,zebra:false,
  width:390,height:240,minWidth:120,minHeight:48,maxHeightRatio:.72,snap:true,gridSnap:8,scrollAfterRows:5,dragHotspot:'handle',tapAction:'none',doubleTapLayout:true,dockMode:'peek',haptics:true,locked:false,
  refreshSeconds:5,afterHoursMode:'sleep',wifiOnlyLive:false,showRefresh:true,showLock:true,showAdd:false,alertChangePct:3,alertPremiumPct:1,alertFlash:true,alertHaptic:true,alertNotification:true,alertCooldownMinutes:10,
  fieldStyles:{},schedule:{enabled:false,days:[1,2,3,4,5],start:'08:30',end:'14:00',mode:'manual',hideAfterHours:true},
