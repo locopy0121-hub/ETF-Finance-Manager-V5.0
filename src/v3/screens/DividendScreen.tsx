@@ -8,12 +8,15 @@ import {
 } from 'react-native';
 
 import { calculateDividendView } from '../engine';
+import { PageFrame, pageFieldEnabled } from '../pageRuntime';
+import { scaledFont } from '../blueprintB';
 import type { ScreenCommon } from '../screensBase';
 
 type DividendScreenProps = {
   common: ScreenCommon;
   onEditEvent?: (id: string) => void;
   onMarkPaid?: (id: string) => void;
+  onSettings?: () => void;
 };
 
 type DividendRow = ReturnType<typeof calculateDividendView>['rows'][number];
@@ -67,6 +70,7 @@ export function DividendScreen({
   common,
   onEditEvent,
   onMarkPaid,
+  onSettings,
 }: DividendScreenProps) {
   const initialDate = new Date();
   const [calendarMonth, setCalendarMonth] = useState(
@@ -172,6 +176,18 @@ export function DividendScreen({
   );
 
   const privacy = common.prefs.privacyMode;
+  const calendar = common.prefs.calendar;
+  const calendarAccent = calendar.followTheme ? '#0066FF' : calendar.accentColor;
+  const calendarText = calendar.followTheme ? '#0F172A' : calendar.textColor;
+  const calendarBackground = calendar.followTheme ? '#FFFFFF' : calendar.backgroundColor;
+  const calendarWeekend = calendar.followTheme ? '#EF4444' : calendar.weekendColor;
+  const calendarEvent = calendar.followTheme ? '#0066FF' : calendar.eventColor;
+  const markerStyle =
+    calendar.eventStyle === 'underline'
+      ? { width: 10, height: 2, borderRadius: 1 }
+      : calendar.eventStyle === 'block'
+        ? { width: 9, height: 6, borderRadius: 2 }
+        : { width: 6, height: 6, borderRadius: 3 };
 
   const shiftMonth = (delta: number) => {
     const selectedDay = Math.max(1, Number(selectedDate.slice(8, 10)) || 1);
@@ -196,14 +212,22 @@ export function DividendScreen({
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.header}>
-        <Text style={styles.eyebrow}>DIVIDEND TRACKER</Text>
-        <Text style={styles.title}>股息月曆</Text>
-        <Text style={styles.subtitle}>
-          以月曆查看除息日、領息日與當日配息明細
-        </Text>
+      <View style={styles.headerRow}>
+        <View style={styles.header}>
+          <Text style={styles.eyebrow}>DIVIDEND TRACKER</Text>
+          <Text style={[styles.title, { fontSize: scaledFont(24, common.prefs) }]}>股息月曆</Text>
+          <Text style={styles.subtitle}>
+            以月曆查看除息日、領息日與當日配息明細
+          </Text>
+        </View>
+        {onSettings ? (
+          <Pressable onPress={onSettings} style={styles.settingsButton}>
+            <Text style={styles.settingsButtonText}>⚙</Text>
+          </Pressable>
+        ) : null}
       </View>
 
+      <PageFrame prefs={common.prefs} page="dividend" cardId="dividend-summary">
       <View style={styles.summaryCard}>
         <View style={styles.monthDividendHero}>
           <Text style={styles.monthDividendLabel}>
@@ -216,23 +240,32 @@ export function DividendScreen({
         </View>
 
         <View style={styles.summaryMetaRow}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>年度預估</Text>
-            <Text style={styles.summaryValue}>
-              {privacy ? '••••••' : money(dividendView.yearExpected)}
-            </Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>平均月領</Text>
-            <Text style={styles.summaryValue}>
-              {privacy ? '••••' : money(dividendView.averageMonthly)}
-            </Text>
-          </View>
+          {pageFieldEnabled(common.prefs, 'dividend', 'yearExpected') ? (
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>年度預估</Text>
+              <Text style={styles.summaryValue}>
+                {privacy ? '••••••' : money(dividendView.yearExpected)}
+              </Text>
+            </View>
+          ) : null}
+          {pageFieldEnabled(common.prefs, 'dividend', 'yearExpected') &&
+          pageFieldEnabled(common.prefs, 'dividend', 'monthlyAverage') ? (
+            <View style={styles.summaryDivider} />
+          ) : null}
+          {pageFieldEnabled(common.prefs, 'dividend', 'monthlyAverage') ? (
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>平均月領</Text>
+              <Text style={styles.summaryValue}>
+                {privacy ? '••••' : money(dividendView.averageMonthly)}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
+      </PageFrame>
 
-      <View style={styles.calendarCard}>
+      <PageFrame prefs={common.prefs} page="dividend" cardId="dividend-calendar">
+      <View style={[styles.calendarCard, { backgroundColor: calendarBackground }]}>
         <View style={styles.monthSwitcher}>
           <Pressable
             accessibilityRole="button"
@@ -247,7 +280,7 @@ export function DividendScreen({
           </Pressable>
 
           <View style={styles.monthTitleWrap}>
-            <Text style={styles.monthTitle}>
+            <Text style={[styles.monthTitle, { color: calendarText, fontSize: 17 * calendar.fontScale / 100 }]}>
               {year} 年 {selectedMonth} 月
             </Text>
             <Text style={styles.monthSubtitle}>
@@ -270,11 +303,11 @@ export function DividendScreen({
 
         <View style={styles.legendRow}>
           <View style={styles.legendItem}>
-            <View style={[styles.eventDot, styles.exDot]} />
+            <View style={[styles.eventDot, markerStyle, { backgroundColor: '#EF4444' }]} />
             <Text style={styles.legendText}>除息日</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.eventDot, styles.payDot]} />
+            <View style={[styles.eventDot, markerStyle, { backgroundColor: '#10B981' }]} />
             <Text style={styles.legendText}>領息日</Text>
           </View>
         </View>
@@ -285,7 +318,8 @@ export function DividendScreen({
               <Text
                 style={[
                   styles.weekdayText,
-                  (index === 0 || index === 6) && styles.weekendText,
+                  { fontSize: 10 * calendar.fontScale / 100, color: calendarText },
+                  calendar.weekendEmphasis && (index === 0 || index === 6) && { color: calendarWeekend },
                 ]}
               >
                 {label}
@@ -315,23 +349,56 @@ export function DividendScreen({
                     }}
                     style={({ pressed }) => [
                       styles.dayCell,
+                      {
+                        height: Math.max(42, calendar.cellHeight),
+                        borderRadius: calendar.cellRadius,
+                        borderWidth: calendar.grid ? 1 : 0,
+                        backgroundColor: calendarBackground,
+                      },
                       !cell.dateKey && styles.dayCellBlank,
-                      selected && styles.dayCellSelected,
+                      selected && calendar.selectedStyle === 'fill' && styles.dayCellSelected,
+                      selected && calendar.selectedStyle === 'outline' && { borderColor: calendarAccent },
                       pressed && cell.dateKey && styles.dayCellPressed,
                     ]}
                   >
                     {cell.day ? (
                       <>
                         {cell.isToday ? (
-                          <View style={styles.todayCircle}>
-                            <Text style={styles.todayText}>{cell.day}</Text>
+                          <View
+                            style={[
+                              styles.todayCircle,
+                              calendar.todayStyle === 'outline' && {
+                                backgroundColor: 'transparent',
+                                borderWidth: 1.5,
+                                borderColor: calendarAccent,
+                              },
+                              calendar.todayStyle === 'fill' && { backgroundColor: calendarAccent },
+                              calendar.todayStyle === 'glow' && {
+                                backgroundColor: calendarAccent,
+                                shadowColor: calendarAccent,
+                                shadowOpacity: 0.8,
+                                shadowRadius: 7,
+                                elevation: 4,
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.todayText,
+                                { fontSize: 10 * calendar.fontScale / 100 },
+                                calendar.todayStyle === 'outline' && { color: calendarAccent },
+                              ]}
+                            >
+                              {cell.day}
+                            </Text>
                           </View>
                         ) : (
                           <Text
                             style={[
                               styles.dayNumber,
-                              isWeekend && styles.dayNumberWeekend,
-                              selected && styles.dayNumberSelected,
+                              { color: calendarText, fontSize: 11 * calendar.fontScale / 100 },
+                              calendar.weekendEmphasis && isWeekend && { color: calendarWeekend },
+                              selected && { color: calendarAccent },
                             ]}
                           >
                             {cell.day}
@@ -340,10 +407,10 @@ export function DividendScreen({
 
                         <View style={styles.markerRow}>
                           {hasEx ? (
-                            <View style={[styles.eventDot, styles.exDot]} />
+                            <View style={[styles.eventDot, markerStyle, { backgroundColor: '#EF4444' }]} />
                           ) : null}
                           {hasPay ? (
-                            <View style={[styles.eventDot, styles.payDot]} />
+                            <View style={[styles.eventDot, markerStyle, { backgroundColor: '#10B981' }]} />
                           ) : null}
                         </View>
 
@@ -369,7 +436,9 @@ export function DividendScreen({
           ))}
         </View>
       </View>
+      </PageFrame>
 
+      <PageFrame prefs={common.prefs} page="dividend" cardId="dividend-events">
       <View style={styles.sectionHeader}>
         <View>
           <Text style={styles.sectionTitle}>
@@ -532,6 +601,7 @@ export function DividendScreen({
           </View>
         )}
       </View>
+      </PageFrame>
     </ScrollView>
   );
 }
@@ -546,9 +616,10 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 120,
   },
-  header: {
-    marginBottom: 16,
-  },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 16 },
+  header: { flex: 1 },
+  settingsButton: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  settingsButtonText: { color: '#0066FF', fontSize: 17 },
   eyebrow: {
     color: '#0066FF',
     fontSize: 11,
