@@ -63,9 +63,16 @@ export function MarketScreen({ common, onSettings, onOpenHolding }: MarketScreen
           <Text style={[styles.title, { fontSize: scaledFont(24, prefs) }]}>市場總覽</Text>
           <Text style={styles.subtitle}>觀察清單與目前持股的即時行情</Text>
         </View>
-        <Pressable onPress={onSettings} style={styles.gear}>
-          <Text style={styles.gearText}>⚙</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          {prefs.ai.enabled && prefs.ai.showHeaderButton && common.onAi ? (
+            <Pressable onPress={common.onAi} style={styles.gear}>
+              <Text style={styles.gearText}>✦</Text>
+            </Pressable>
+          ) : null}
+          <Pressable onPress={onSettings} style={styles.gear}>
+            <Text style={styles.gearText}>⚙</Text>
+          </Pressable>
+        </View>
       </View>
 
       <PageFrame prefs={prefs} page="market" cardId="market-main">
@@ -126,6 +133,7 @@ const styles = StyleSheet.create({
   eyebrow: { color: V3_THEME.colors.primary, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
   title: { marginTop: 4, color: V3_THEME.colors.textPrimary, fontWeight: '900' },
   subtitle: { marginTop: 5, color: V3_THEME.colors.textSecondary, fontSize: 11 },
+  headerActions: { flexDirection: 'row', gap: 8 },
   gear: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: V3_THEME.colors.borderGlow, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   gearText: { color: V3_THEME.colors.primary, fontSize: 17 },
   card: { borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', padding: 14, ...V3_THEME.shadow },
