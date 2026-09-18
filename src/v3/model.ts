@@ -262,8 +262,8 @@ export function makeDefaultPageLayouts(homeCards:HomeMetricKey[][]=[['totalAsset
   dividend:{columns:6,cards:[card('dividend-summary','股息摘要',pageFields.dividend??[],0,0,6,2),{...card('dividend-calendar','股息月曆',[],0,2,6,4),role:'module'},{...card('dividend-events','股息事件明細',[],0,6,6,3),role:'module'}]},
   calculator:{columns:6,cards:[card('calculator-summary','試算摘要',pageFields.calculator??[],0,0,6,2)]},
   market:{columns:6,cards:[card('market-main','市場總覽',pageFields.market??[],0,0,6,2)]},
-  ai:{columns:6,cards:[card('ai-main','AI 助理',pageFields.ai??[],0,0,6,2)]},
-  settings:{columns:6,cards:[card('settings-main','設定中心',pageFields.settings??[],0,0,6,2)]},
+  ai:{columns:6,cards:[{...card('ai-main','AI 助理',pageFields.ai??[],0,0,6,2),role:'module'}]},
+  settings:{columns:6,cards:[{...card('settings-main','設定中心',pageFields.settings??[],0,0,6,2),role:'module'}]},
   detail:{columns:6,cards:[card('detail-summary','ETF 詳情摘要',pageFields.detail??[],0,0,6,2)]},
  };
 }
