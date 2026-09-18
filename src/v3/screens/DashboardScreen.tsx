@@ -264,9 +264,16 @@ export function DashboardScreen({
             今天也用清楚的數據，穩定累積你的資產。
           </Text>
         </View>
-        <Pressable onPress={onSettings} style={styles.gearButton}>
-          <Text style={styles.gearButtonText}>⚙</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          {prefs.ai.enabled && prefs.ai.showHeaderButton && common.onAi ? (
+            <Pressable onPress={common.onAi} style={styles.gearButton}>
+              <Text style={styles.gearButtonText}>✦</Text>
+            </Pressable>
+          ) : null}
+          <Pressable onPress={onSettings} style={styles.gearButton}>
+            <Text style={styles.gearButtonText}>⚙</Text>
+          </Pressable>
+        </View>
       </View>
 
       <PageFrameStack prefs={prefs} page="dashboard">
@@ -508,6 +515,7 @@ const styles = StyleSheet.create({
   welcome: { flex: 1,
     marginBottom: 16,
   },
+  headerActions: { flexDirection: 'row', gap: 8 },
   gearButton: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   gearButtonText: { color: '#0066FF', fontSize: 17 },
   eyebrow: {
