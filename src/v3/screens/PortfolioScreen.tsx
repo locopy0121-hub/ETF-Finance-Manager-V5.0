@@ -12,7 +12,7 @@ import { calculateHoldingView, calculatePortfolioView } from '../engine';
 import { classifyEtf, type EtfCategory } from '../etfResearch';
 import { V3_THEME, resolvePnlTone } from '../theme';
 import { PageFrame, PageFrameStack, pageFieldEnabled } from '../pageRuntime';
-import { scaledFont } from '../blueprintB';
+import FontScaleScope from '../components/FontScaleScope';
 import type { ScreenCommon } from '../screensBase';
 
 type PortfolioTab = 'all' | 'tw' | 'us';
@@ -193,6 +193,7 @@ export function PortfolioScreen({
   const privacy = common.prefs.privacyMode;
 
   return (
+    <FontScaleScope prefs={common.prefs}>
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
@@ -201,7 +202,7 @@ export function PortfolioScreen({
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.eyebrow}>PORTFOLIO</Text>
-          <Text style={[styles.title, { fontSize: scaledFont(24, common.prefs) }]}>庫存持股</Text>
+          <Text style={styles.title}>庫存持股</Text>
           <Text style={styles.subtitle}>資產配置與持股表現一目了然</Text>
         </View>
         {common.prefs.ai.enabled && common.prefs.ai.showHeaderButton && common.onAi ? (
@@ -367,6 +368,7 @@ export function PortfolioScreen({
       </PageFrame>
       </PageFrameStack>
     </ScrollView>
+    </FontScaleScope>
   );
 }
 
