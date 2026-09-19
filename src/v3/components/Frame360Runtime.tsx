@@ -101,22 +101,31 @@ function formatDataValue(
   });
 }
 
-function resolveDataColor(
-  cell: Frame360DataCell,
+function resolveRuleColor(
+  rule: 'auto' | 'fixed' | 'theme' | 'pnl' | 'market' | undefined,
   value: string | number | undefined,
+  fixed: string | undefined,
+  surface: 'text' | 'background' | 'border' = 'text',
 ) {
-  if (cell.content.kind !== 'data') return cell.style.textColor;
-  const rule = cell.content.colorRule ?? 'auto';
-  if (rule === 'fixed') return cell.style.textColor;
-  if (rule === 'pnl' || rule === 'market') {
-    const numeric = Number(value);
-    if (Number.isFinite(numeric)) {
-      if (numeric > 0) return '#DC2626';
-      if (numeric < 0) return '#16A34A';
-      return '#CA8A04';
-    }
+  if (!rule || rule === 'fixed' || rule === 'auto') return fixed;
+  if (rule === 'theme') return fixed ?? (surface === 'background' ? '#EFF6FF' : '#0066FF');
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fixed;
+  if (surface === 'background') {
+    if (numeric > 0) return '#FEE2E2';
+    if (numeric < 0) return '#DCFCE7';
+    return '#FEF9C3';
   }
-  return cell.style.textColor;
+  if (numeric > 0) return '#DC2626';
+  if (numeric < 0) return '#16A34A';
+  return '#CA8A04';
+}
+
+function resolveDataValue(cell: Frame360DataCell, data: Props['data']) {
+  if (cell.content.kind !== 'data') return undefined;
+  return cell.content.formula
+    ? evaluateFormula(cell.content.formula, data)
+    : data[cell.content.binding];
 }
 
 function CellContent({
@@ -139,6 +148,7 @@ function CellContent({
     fontWeight: cell.style.fontWeight ?? '700',
     letterSpacing: cell.style.letterSpacing ?? 0,
     lineHeight: cell.style.lineHeight,
+    backgroundColor: cell.style.textBackgroundColor ?? 'transparent',
     textAlign: (
       cell.style.alignment.includes('Right')
         ? 'right'
@@ -152,18 +162,27 @@ function CellContent({
     return <Text style={[styles.value, textStyle]}>{content.text}</Text>;
   }
   if (content.kind === 'data') {
-    const raw = content.formula
-      ? evaluateFormula(content.formula, data)
-      : data[content.binding];
-    const color = resolveDataColor(cell, raw);
+    const raw = resolveDataValue(cell, data);
+    const color = resolveRuleColor(
+      content.colorRule ?? cell.style.textColorRule ?? 'auto',
+      raw,
+      cell.style.textColor,
+      'text',
+    );
+    const textBackgroundColor = resolveRuleColor(
+      cell.style.textBackgroundColorRule,
+      raw,
+      cell.style.textBackgroundColor,
+      'background',
+    );
     return (
       <View>
         {content.label ? (
-          <Text style={[styles.dataLabel, textStyle, color ? { color } : null]}>
+          <Text style={[styles.dataLabel, textStyle, color ? { color } : null, textBackgroundColor ? { backgroundColor: textBackgroundColor } : null]}>
             {content.label}
           </Text>
         ) : null}
-        <Text style={[styles.value, textStyle, color ? { color } : null]}>
+        <Text style={[styles.value, textStyle, color ? { color } : null, textBackgroundColor ? { backgroundColor: textBackgroundColor } : null]}>
           {formatDataValue(raw, content.format)}
         </Text>
       </View>
@@ -306,10 +325,32 @@ export default function Frame360Runtime({
     <View style={[styles.root, { minHeight }]}>
       {cells.map(cell => {
         if (cell.style.visible === false) return null;
-        const left = ((cell.columnStart - 1) / template.grid.columns) * 100;
-        const top = ((cell.rowStart - 1) / template.grid.rows) * 100;
-        const width = (cell.columnSpan / template.grid.columns) * 100;
-        const height = rowHeight * cell.rowSpan;
+        const free = cell.layout?.mode === 'free';
+        const left = free && cell.layout?.x != null
+          ? cell.layout.x
+          : ((cell.columnStart - 1) / template.grid.columns) * 100;
+        const top = free && cell.layout?.y != null
+          ? cell.layout.y
+          : ((cell.rowStart - 1) / template.grid.rows) * 100;
+        const width = free && cell.layout?.width != null
+          ? cell.layout.width
+          : (cell.columnSpan / template.grid.columns) * 100;
+        const height = free && cell.layout?.height != null
+          ? (cell.layout.height / 100) * minHeight
+          : rowHeight * cell.rowSpan;
+        const rawForColor = resolveDataValue(cell, data);
+        const backgroundColor = resolveRuleColor(
+          cell.style.backgroundColorRule,
+          rawForColor,
+          cell.style.backgroundColor,
+          'background',
+        );
+        const borderColor = resolveRuleColor(
+          cell.style.borderColorRule,
+          rawForColor,
+          cell.style.borderColor,
+          'border',
+        );
         const align =
           cell.style.alignment.includes('Right')
             ? 'flex-end'
@@ -329,8 +370,9 @@ export default function Frame360Runtime({
             cell={cell}
             style={{
               left: `${left}%`,
-              top: `${top}%`,
+              top: free ? `${top}%` : `${top}%`,
               width: `${width}%`,
+              zIndex: cell.layout?.zIndex ?? 0,
               height,
               alignItems: align,
               justifyContent: justify,
@@ -338,8 +380,8 @@ export default function Frame360Runtime({
               margin: cell.style.margin ?? 0,
               borderRadius: cell.style.radius ?? 8,
               opacity: (cell.style.opacity ?? 100) / 100,
-              backgroundColor: cell.style.backgroundColor ?? 'transparent',
-              borderColor: cell.style.borderColor ?? 'transparent',
+              backgroundColor: backgroundColor ?? 'transparent',
+              borderColor: borderColor ?? 'transparent',
               borderWidth: cell.style.borderWidth ?? 0,
               shadowOpacity: cell.style.shadowOpacity ?? 0,
               shadowRadius: cell.style.shadowRadius ?? 0,
