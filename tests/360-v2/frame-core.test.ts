@@ -13,8 +13,8 @@ describe('360 frame core model', () => {
     const grid = createFrame360Grid(4, 8);
     expect(grid.rows).toBe(4);
     expect(grid.columns).toBe(8);
-    expect(grid.baseCells).toHaveLength(32);
-    expect(grid.dataCells).toHaveLength(32);
+    expect(grid.baseCells.length).toBe(32);
+    expect(grid.dataCells.length).toBe(32);
     expect(new Set(grid.dataCells.map(cell => cell.id)).size).toBe(32);
   });
 
@@ -34,7 +34,7 @@ describe('360 frame core model', () => {
 
     expect(a.templateId).toBe(template.id);
     expect(b.templateId).toBe(template.id);
-    expect(a.dataKey).not.toBe(b.dataKey);
+    expect(a.dataKey === b.dataKey).toBe(false);
   });
 
   it('updates the shared template without changing its identity', () => {
@@ -75,10 +75,10 @@ describe('360 frame merge safety', () => {
     const result = mergeFrame360Cells(grid, ids, 'keepFirst');
     expect(result.status).toBe('merged');
     if (result.status !== 'merged') return;
-    expect(result.grid.dataCells).toHaveLength(1);
-    expect(result.mergedCell.baseCellIds).toHaveLength(4);
+    expect(result.grid.dataCells.length).toBe(1);
+    expect(result.mergedCell.baseCellIds.length).toBe(4);
 
     const restored = splitFrame360Cell(result.grid, result.mergedCell.id);
-    expect(restored.dataCells).toHaveLength(4);
+    expect(restored.dataCells.length).toBe(4);
   });
 });
