@@ -20,7 +20,7 @@ import type {
 } from '../model';
 import { PAGE_REGISTRY, type PageFieldKey } from '../pageRegistry';
 import { normalizeGridMonitor } from '../monitoring';
-import { PageFrame } from '../pageRuntime';
+import { PageAddedFrames, PageFrame } from '../pageRuntime';
 import FontScaleScope from '../components/FontScaleScope';
 import Frame360EditorModal from '../components/Frame360EditorModal';
 import { createFrame360Template, type Frame360Template } from '../frame360';
@@ -2120,7 +2120,7 @@ export function SettingsScreen({
         ))}
       </View>
       </PageFrame>
-
+      <PageAddedFrames prefs={prefs} page="settings" />
 
     </ScrollView>
     </FontScaleScope>
