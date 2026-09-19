@@ -1,6 +1,6 @@
 status=cancelled
-run_id=35435256681
-source_commit=299d1b356064062e39576cfd6db5d7614f3c0860
+run_id=35435280270
+source_commit=2f89d11e0cddce1cfea0a4a677a307a6c394a054
 artifact_name=ETF-Finance-Manager-V5.0.1-BlueprintB-ARM64
 versionName=5.0.1
 versionCode=50001
