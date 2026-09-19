@@ -401,7 +401,6 @@ function RuntimeCellSurface({
     <Animated.View style={[styles.cell, style, animatedStyle]}>
       {backgroundUri ? (
         <Image
-          pointerEvents="none"
           source={{ uri: backgroundUri }}
           resizeMode={resizeMode as any}
           style={[
