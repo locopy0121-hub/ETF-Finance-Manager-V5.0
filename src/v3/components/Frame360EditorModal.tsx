@@ -215,6 +215,7 @@ export default function Frame360EditorModal({
   const [sessionSnapshot, setSessionSnapshot] = useState<Frame360Template | null>(template ? cloneTemplate(template) : null);
   const [deepSnapshot, setDeepSnapshot] = useState<Frame360DataCell | null>(null);
   const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
+  const [numericDraft, setNumericDraft] = useState({ x: '', y: '', width: '', height: '' });
 
   useEffect(() => {
     if (!visible || !template) return;
@@ -234,19 +235,19 @@ export default function Frame360EditorModal({
 
   const selectedCells = useMemo(
     () =>
-      draft?.grid.dataCells.filter(cell => selected.includes(cell.id)) ?? [],
+      draft?.blocks.filter(cell => selected.includes(cell.id)) ?? [],
     [draft, selected],
   );
 
   const deepCell = useMemo(
-    () => draft?.grid.dataCells.find(cell => cell.id === deepCellId) ?? null,
+    () => draft?.blocks.find(cell => cell.id === deepCellId) ?? null,
     [draft, deepCellId],
   );
 
   const previewData = useMemo(() => {
     if (!draft) return {};
     return Object.fromEntries(
-      draft.grid.dataCells
+      draft.blocks
         .filter(cell => cell.content.kind === 'data' && cell.previewValue !== undefined)
         .map(cell => {
           const content = cell.content.kind === 'data' ? cell.content : null;
@@ -267,12 +268,9 @@ export default function Frame360EditorModal({
       if (!current) return current;
       return {
         ...current,
-        grid: {
-          ...current.grid,
-          dataCells: current.grid.dataCells.map(cell =>
-            cell.id === cellId ? updater(cell) : cell,
-          ),
-        },
+        blocks: current.blocks.map(cell =>
+          cell.id === cellId ? updater(cell) : cell,
+        ),
       };
     });
   };
@@ -280,10 +278,10 @@ export default function Frame360EditorModal({
 
   const getDefaultLayout = (cell: Frame360DataCell) => ({
     mode: 'free' as const,
-    x: ((cell.columnStart - 1) / draft!.grid.columns) * 100,
-    y: ((cell.rowStart - 1) / draft!.grid.rows) * 100,
-    width: (cell.columnSpan / draft!.grid.columns) * 100,
-    height: (cell.rowSpan / draft!.grid.rows) * 100,
+    x: cell.layout?.x ?? 0,
+    y: cell.layout?.y ?? 0,
+    width: cell.layout?.width ?? 20,
+    height: cell.layout?.height ?? 12,
     minWidth: 4,
     minHeight: 4,
     maxWidth: 100,
@@ -308,7 +306,7 @@ export default function Frame360EditorModal({
     if (editorLocked || !draft) return;
     setDraft(current => {
       if (!current) return current;
-      const target = current.grid.dataCells.find(cell => cell.id === cellId);
+      const target = current.blocks.find(cell => cell.id === cellId);
       if (!target || target.layout?.locked) return current;
       const base = getDefaultLayout(target);
       const next = updater(base);
@@ -320,7 +318,7 @@ export default function Frame360EditorModal({
         height: Math.max(next.minHeight ?? 4, Math.min(next.maxHeight ?? 100, next.height)),
       };
       if (!current.allowOverlap) {
-        const collision = current.grid.dataCells.some(other => {
+        const collision = current.blocks.some(other => {
           if (other.id === cellId || other.content.kind === 'empty') return false;
           return rectsOverlap(normalized, getDefaultLayout(other));
         });
@@ -328,12 +326,9 @@ export default function Frame360EditorModal({
       }
       return {
         ...current,
-        grid: {
-          ...current.grid,
-          dataCells: current.grid.dataCells.map(cell =>
-            cell.id === cellId ? { ...cell, layout: normalized } : cell,
-          ),
-        },
+        blocks: current.blocks.map(cell =>
+          cell.id === cellId ? { ...cell, layout: normalized } : cell,
+        ),
       };
     });
   };
@@ -341,8 +336,8 @@ export default function Frame360EditorModal({
   const nudgeBlock = (cellId: string, dx: number, dy: number) =>
     updateBlockLayout(cellId, layout => {
       const step = layout.nudgeStep ?? 1;
-      const pxW = Math.max(1, draft!.grid.columns * CELL_W);
-      const pxH = Math.max(1, draft!.grid.rows * CELL_H);
+      const pxW = Math.max(1, draft!.canvas.width);
+      const pxH = Math.max(1, draft!.canvas.height);
       return {
         ...layout,
         x: layout.x + (dx * step / pxW) * 100,
@@ -355,13 +350,13 @@ export default function Frame360EditorModal({
     layout: ReturnType<typeof getDefaultLayout>,
   ) => {
     if (!draft) return layout;
-    const pxW = Math.max(1, draft.grid.columns * CELL_W);
-    const pxH = Math.max(1, draft.grid.rows * CELL_H);
+    const pxW = Math.max(1, draft.canvas.width);
+    const pxH = Math.max(1, draft.canvas.height);
     const thresholdX = (6 / pxW) * 100;
     const thresholdY = (6 / pxH) * 100;
     const xGuides = [0, 50, 100];
     const yGuides = [0, 50, 100];
-    draft.grid.dataCells.forEach(other => {
+    draft.blocks.forEach(other => {
       if (other.id === cellId || other.content.kind === 'empty') return;
       const rect = getDefaultLayout(other);
       xGuides.push(rect.x, rect.x + rect.width / 2, rect.x + rect.width);
@@ -399,8 +394,8 @@ export default function Frame360EditorModal({
 
   const dragBlock = (cellId: string, dx: number, dy: number) =>
     updateBlockLayout(cellId, layout => {
-      const pxW = Math.max(1, draft!.grid.columns * CELL_W);
-      const pxH = Math.max(1, draft!.grid.rows * CELL_H);
+      const pxW = Math.max(1, draft!.canvas.width);
+      const pxH = Math.max(1, draft!.canvas.height);
       return snapLayout(cellId, {
         ...layout,
         x: layout.x + (dx / pxW) * 100,
@@ -411,8 +406,8 @@ export default function Frame360EditorModal({
 
   const resizeBlock = (cellId: string, dx: number, dy: number) =>
     updateBlockLayout(cellId, layout => {
-      const pxW = Math.max(1, draft!.grid.columns * CELL_W);
-      const pxH = Math.max(1, draft!.grid.rows * CELL_H);
+      const pxW = Math.max(1, draft!.canvas.width);
+      const pxH = Math.max(1, draft!.canvas.height);
       const width = layout.width + (dx / pxW) * 100;
       const height = layout.lockAspectRatio
         ? width * (layout.height / Math.max(layout.width, 0.001))
@@ -422,7 +417,7 @@ export default function Frame360EditorModal({
 
   const setLayer = (cellId: string, action: 'up' | 'down' | 'top' | 'bottom') => {
     if (!draft || editorLocked) return;
-    const zValues = draft.grid.dataCells.map(cell => cell.layout?.zIndex ?? 0);
+    const zValues = draft.blocks.map(cell => cell.layout?.zIndex ?? 0);
     const min = Math.min(0, ...zValues);
     const max = Math.max(0, ...zValues);
     updateBlockLayout(cellId, layout => ({
@@ -742,7 +737,7 @@ export default function Frame360EditorModal({
 
   const duplicateBlock = (cellId: string) => {
     if (!draft || editorLocked) return;
-    const source = draft.grid.dataCells.find(cell => cell.id === cellId);
+    const source = draft.blocks.find(cell => cell.id === cellId);
     if (!source) return;
     const copy = JSON.parse(JSON.stringify(source)) as Frame360DataCell;
     copy.id = `block-${Date.now()}-copy`;
@@ -758,10 +753,7 @@ export default function Frame360EditorModal({
       current
         ? {
             ...current,
-            grid: {
-              ...current.grid,
-              dataCells: [...current.grid.dataCells, copy],
-            },
+            blocks: [...current.blocks, copy],
           }
         : current,
     );
@@ -776,10 +768,7 @@ export default function Frame360EditorModal({
       current
         ? {
             ...current,
-            grid: {
-              ...current.grid,
-              dataCells: current.grid.dataCells.filter(cell => cell.id !== cellId),
-            },
+            blocks: current.blocks.filter(cell => cell.id !== cellId),
           }
         : current,
     );
@@ -810,6 +799,13 @@ export default function Frame360EditorModal({
     setMultiSelectMode(false);
     setDeepCellId(cell.id);
     setDeepSnapshot(JSON.parse(JSON.stringify(cell)) as Frame360DataCell);
+    const layout = getDefaultLayout(cell);
+    setNumericDraft({
+      x: String(Math.round((layout.x / 100) * Math.max(1, draft?.canvas.width ?? 360))),
+      y: String(Math.round((layout.y / 100) * Math.max(1, draft?.canvas.height ?? 500))),
+      width: String(Math.round((layout.width / 100) * Math.max(1, draft?.canvas.width ?? 360))),
+      height: String(Math.round((layout.height / 100) * Math.max(1, draft?.canvas.height ?? 500))),
+    });
     setDeepDialog(true);
   };
 
@@ -868,10 +864,9 @@ export default function Frame360EditorModal({
 
   const renderLockedGrid = (preview = false) => {
     if (!draft) return null;
-    const unitW = preview ? PREVIEW_W : CELL_W;
-    const unitH = preview ? PREVIEW_H : CELL_H;
-    const width = draft.grid.columns * unitW;
-    const height = draft.grid.rows * unitH;
+    const scale = preview ? Math.min(1, 320 / Math.max(1, draft.canvas.width)) : 1;
+    const width = draft.canvas.width * scale;
+    const height = draft.canvas.height * scale;
 
     return (
       <View
@@ -887,26 +882,17 @@ export default function Frame360EditorModal({
         {!preview && guides.y != null ? (
           <View pointerEvents="none" style={[styles.guideHorizontal, { top: (guides.y / 100) * height }]} />
         ) : null}
-        {draft.grid.dataCells.filter(cell => cell.content.kind !== 'empty' || Boolean(cell.targetNodeId)).map(cell => {
+        {draft.blocks.filter(cell => cell.content.kind !== 'empty' || Boolean(cell.targetNodeId)).map(cell => {
           const active = !preview && selected.includes(cell.id);
           const layout = getDefaultLayout(cell);
-          const baseStyle = cell.layout?.mode === 'free'
-            ? {
-                position: 'absolute' as const,
-                left: (layout.x / 100) * width,
-                top: (layout.y / 100) * height,
-                width: (layout.width / 100) * width,
-                height: (layout.height / 100) * height,
-                zIndex: layout.zIndex ?? 0,
-              }
-            : {
-                position: 'absolute' as const,
-                left: (cell.columnStart - 1) * unitW,
-                top: (cell.rowStart - 1) * unitH,
-                width: cell.columnSpan * unitW,
-                height: cell.rowSpan * unitH,
-                zIndex: cell.layout?.zIndex ?? 0,
-              };
+          const baseStyle = {
+            position: 'absolute' as const,
+            left: (layout.x / 100) * width,
+            top: (layout.y / 100) * height,
+            width: (layout.width / 100) * width,
+            height: (layout.height / 100) * height,
+            zIndex: layout.zIndex ?? 0,
+          };
           return (
             <EditableBlock
               key={cell.id}
@@ -967,7 +953,7 @@ export default function Frame360EditorModal({
               <Text style={styles.eyebrow}>360 編輯器</Text>
               <Text style={styles.title}>{draft.name}</Text>
               <Text style={styles.subtitle}>
-                工作區 {draft.grid.columns} 欄 × {draft.grid.rows} 列 · {draft.grid.dataCells.length} 個方塊 · 已選 {selected.length}
+                畫布 {draft.canvas.width} × {draft.canvas.height}px · {draft.blocks.length} 個方塊 · 已選 {selected.length}
               </Text>
             </View>
             <Pressable onPress={requestClose} style={styles.closeButton}>
@@ -1005,7 +991,7 @@ export default function Frame360EditorModal({
               onPress={() => setGridDialog(true)}
               style={[styles.toolButton, editorLocked && styles.disabled]}
             >
-              <Text style={styles.toolText}>調整工作區格線</Text>
+              <Text style={styles.toolText}>畫布輔助格線</Text>
             </Pressable>
 
           </View>
@@ -1179,12 +1165,6 @@ export default function Frame360EditorModal({
                     <Text style={styles.choiceText}>自由方塊</Text>
                   </Pressable>
                   <Pressable
-                    onPress={() => replaceCell(deepCell.id, cell => ({ ...cell, layout: { ...cell.layout, mode: 'grid' } }))}
-                    style={[styles.choice, deepCell.layout?.mode !== 'free' && styles.choiceActive]}
-                  >
-                    <Text style={styles.choiceText}>格線定位</Text>
-                  </Pressable>
-                  <Pressable
                     onPress={() => updateBlockLayout(deepCell.id, layout => ({ ...layout, locked: !layout.locked }))}
                     style={[styles.choice, deepCell.layout?.locked && styles.choiceActive]}
                   >
@@ -1198,10 +1178,15 @@ export default function Frame360EditorModal({
                     <TextInput
                       editable={!editorLocked && !deepCell.layout?.locked}
                       keyboardType="decimal-pad"
-                      value={String(Math.round((getDefaultLayout(deepCell).x / 100) * Math.max(1, draft.grid.columns * CELL_W)))}
-                      onChangeText={value => {
-                        const pxW = Math.max(1, draft.grid.columns * CELL_W);
-                        updateBlockLayout(deepCell.id, layout => ({ ...layout, x: ((Number(value) || 0) / pxW) * 100 }));
+                      value={numericDraft.x}
+                      onChangeText={value => setNumericDraft(current => ({ ...current, x: value }))}
+                      onBlur={() => {
+                        const value = Number(numericDraft.x);
+                        if (Number.isFinite(value)) updateBlockLayout(deepCell.id, layout => ({ ...layout, x: (value / Math.max(1, draft.canvas.width)) * 100 }));
+                      }}
+                      onSubmitEditing={() => {
+                        const value = Number(numericDraft.x);
+                        if (Number.isFinite(value)) updateBlockLayout(deepCell.id, layout => ({ ...layout, x: (value / Math.max(1, draft.canvas.width)) * 100 }));
                       }}
                       style={styles.deepInput}
                     />
@@ -1211,10 +1196,11 @@ export default function Frame360EditorModal({
                     <TextInput
                       editable={!editorLocked && !deepCell.layout?.locked}
                       keyboardType="decimal-pad"
-                      value={String(Math.round((getDefaultLayout(deepCell).y / 100) * Math.max(1, draft.grid.rows * CELL_H)))}
-                      onChangeText={value => {
-                        const pxH = Math.max(1, draft.grid.rows * CELL_H);
-                        updateBlockLayout(deepCell.id, layout => ({ ...layout, y: ((Number(value) || 0) / pxH) * 100 }));
+                      value={numericDraft.y}
+                      onChangeText={value => setNumericDraft(current => ({ ...current, y: value }))}
+                      onBlur={() => {
+                        const value = Number(numericDraft.y);
+                        if (Number.isFinite(value)) updateBlockLayout(deepCell.id, layout => ({ ...layout, y: (value / Math.max(1, draft.canvas.height)) * 100 }));
                       }}
                       style={styles.deepInput}
                     />
@@ -1226,10 +1212,11 @@ export default function Frame360EditorModal({
                     <TextInput
                       editable={!editorLocked && !deepCell.layout?.locked}
                       keyboardType="decimal-pad"
-                      value={String(Math.round((getDefaultLayout(deepCell).width / 100) * Math.max(1, draft.grid.columns * CELL_W)))}
-                      onChangeText={value => {
-                        const pxW = Math.max(1, draft.grid.columns * CELL_W);
-                        updateBlockLayout(deepCell.id, layout => ({ ...layout, width: ((Number(value) || 1) / pxW) * 100, editorUnit: 'px' }));
+                      value={numericDraft.width}
+                      onChangeText={value => setNumericDraft(current => ({ ...current, width: value }))}
+                      onBlur={() => {
+                        const value = Number(numericDraft.width);
+                        if (Number.isFinite(value) && value > 0) updateBlockLayout(deepCell.id, layout => ({ ...layout, width: (value / Math.max(1, draft.canvas.width)) * 100, editorUnit: 'px' }));
                       }}
                       style={styles.deepInput}
                     />
@@ -1239,10 +1226,11 @@ export default function Frame360EditorModal({
                     <TextInput
                       editable={!editorLocked && !deepCell.layout?.locked}
                       keyboardType="decimal-pad"
-                      value={String(Math.round((getDefaultLayout(deepCell).height / 100) * Math.max(1, draft.grid.rows * CELL_H)))}
-                      onChangeText={value => {
-                        const pxH = Math.max(1, draft.grid.rows * CELL_H);
-                        updateBlockLayout(deepCell.id, layout => ({ ...layout, height: ((Number(value) || 1) / pxH) * 100, editorUnit: 'px' }));
+                      value={numericDraft.height}
+                      onChangeText={value => setNumericDraft(current => ({ ...current, height: value }))}
+                      onBlur={() => {
+                        const value = Number(numericDraft.height);
+                        if (Number.isFinite(value) && value > 0) updateBlockLayout(deepCell.id, layout => ({ ...layout, height: (value / Math.max(1, draft.canvas.height)) * 100, editorUnit: 'px' }));
                       }}
                       style={styles.deepInput}
                     />
@@ -1987,10 +1975,7 @@ export default function Frame360EditorModal({
                     <Frame360Runtime
                       template={{
                         ...draft,
-                        grid: {
-                          ...draft.grid,
-                          dataCells: [deepCell],
-                        },
+                        blocks: [deepCell],
                       }}
                       data={previewData}
                       reminderContext={{
