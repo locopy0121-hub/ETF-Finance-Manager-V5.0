@@ -213,6 +213,26 @@ export default function Frame360EditorModal({
   const [deepSnapshot, setDeepSnapshot] = useState<Frame360DataCell | null>(null);
   const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
   const [frameLayoutDraft, setFrameLayoutDraft] = useState<Frame360ParentLayout | undefined>(frameLayout);
+  const [deepOffset, setDeepOffset] = useState({ x: 0, y: 0 });
+  const deepPanStart = useRef({ x: 0, y: 0 });
+  const deepPan = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: (_event, gesture) =>
+          Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2,
+        onPanResponderGrant: () => {
+          deepPanStart.current = deepOffset;
+        },
+        onPanResponderMove: (_event, gesture) => {
+          setDeepOffset({
+            x: deepPanStart.current.x + gesture.dx,
+            y: deepPanStart.current.y + gesture.dy,
+          });
+        },
+      }),
+    [deepOffset],
+  );
 
   useEffect(() => {
     if (!visible || !template) return;
@@ -229,6 +249,7 @@ export default function Frame360EditorModal({
     setDeepSnapshot(null);
     setGuides({});
     setFrameLayoutDraft(frameLayout ? { ...frameLayout } : undefined);
+    setDeepOffset({ x: 0, y: 0 });
   }, [visible, template?.id, template?.version, frameLayout?.x, frameLayout?.y, frameLayout?.w, frameLayout?.h, frameLayout?.columns]);
 
   const selectedCells = useMemo(
@@ -762,6 +783,7 @@ export default function Frame360EditorModal({
     setMultiSelectMode(false);
     setDeepCellId(cell.id);
     setDeepSnapshot(JSON.parse(JSON.stringify(cell)) as Frame360DataCell);
+    setDeepOffset({ x: 0, y: 0 });
     setDeepDialog(true);
   };
 
@@ -1152,17 +1174,25 @@ export default function Frame360EditorModal({
           <View
             style={[
               styles.deepSheet,
-              { paddingBottom: Math.max(20, insets.bottom + 14) },
+              {
+                paddingBottom: Math.max(20, insets.bottom + 14),
+                transform: [{ translateX: deepOffset.x }, { translateY: deepOffset.y }],
+              },
             ]}
           >
-            <Text style={styles.dialogTitle}>360 深度功能</Text>
-            <Text style={styles.dialogHint}>
-              {deepCell
-                ? `${cellPreviewText(deepCell)} · ${frame360CellTypeLabel(
-                    deepCell.content.kind,
-                  )}`
-                : ''}
-            </Text>
+            <View {...deepPan.panHandlers} style={styles.deepDragHandle}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.dialogTitle}>360 深度功能</Text>
+                <Text style={styles.dialogHint}>
+                  {deepCell
+                    ? `${cellPreviewText(deepCell)} · ${frame360CellTypeLabel(
+                        deepCell.content.kind,
+                      )}`
+                    : ''}
+                </Text>
+              </View>
+              <Text style={styles.dragHint}>拖移視窗</Text>
+            </View>
 
             {deepCell ? (
               <ScrollView
@@ -2302,7 +2332,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 18,
   },
-  deepBody: { paddingVertical: 16, gap: 12 },
+  deepBody: { paddingVertical: 16, gap: 12, paddingBottom: 28 },
+  deepDragHandle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  dragHint: {
+    color: '#0066FF',
+    fontSize: 9,
+    fontWeight: '900',
+    borderRadius: 999,
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
   deepLabel: { color: '#334155', fontSize: 11, fontWeight: '900' },
   choiceWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   choice: {
