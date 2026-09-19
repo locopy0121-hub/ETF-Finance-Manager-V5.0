@@ -45,7 +45,7 @@ export function createPortfolioHoldingFrame360Template(): Frame360Template {
   template = append(template, { kind: 'data', binding: 'name' }, { x: 21, y: 8, width: 35, height: 38 });
   template = append(template, { kind: 'reminder', source: 'exDividendToday', activeLabel: '今日除息', effect: 'blink' }, { x: 58, y: 8, width: 18, height: 38 });
   template = append(template, { kind: 'data', binding: 'category' }, { x: 1, y: 54, width: 24, height: 36 });
-  template = append(template, { kind: 'data', binding: 'cashPnl', colorRule: 'pnl' }, { x: 27, y: 54, width: 34, height: 36 });
+  template = append(template, { kind: 'data', binding: 'cashPnl', format: 'currency', colorRule: 'pnl' }, { x: 27, y: 54, width: 34, height: 36 });
   template = append(template, { kind: 'data', binding: 'cashRoi', format: 'percent', colorRule: 'pnl' }, { x: 63, y: 54, width: 36, height: 36 });
 
   return migrateFrame360CellsToBlocks(template);
