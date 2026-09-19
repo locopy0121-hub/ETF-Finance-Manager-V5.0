@@ -199,9 +199,7 @@ export function PortfolioScreen({
   const holdingFrameTemplate =
     common.prefs.frame360Templates?.['portfolio:portfolio-list'] ??
     createPortfolioHoldingFrame360Template();
-  const portfolioEditMode =
-    common.prefs.globalEditMode &&
-    Boolean(common.prefs.monitoring?.pageCustomize?.portfolio);
+  const portfolioEditMode = Boolean(common.prefs.globalEditMode);
   const editingHoldingRow = rows.find(row => row.symbol === editingHoldingSymbol);
   const holdingPreviewData: Record<string, unknown> | undefined = editingHoldingRow
     ? {
