@@ -35,7 +35,8 @@
     "update:preview:v360": "powershell -ExecutionPolicy Bypass -File .\\OTA_V3.6.0_PREVIEW.ps1",
     "audit:ui-inventory": "node scripts/GENERATE_UI_INVENTORY.cjs",
     "audit:v370": "node scripts/V370_UPGRADE_AUDIT.cjs",
-    "check:v370": "node scripts/V370_UPGRADE_AUDIT.cjs && node scripts/FINANCE_ENGINE_V342_TEST.cjs && node scripts/FORMULA_ENGINE_V342_TEST.cjs && node scripts/V340_FIX1_REGRESSION_AUDIT.cjs && node scripts/DIVIDEND_CUTOFF_TEST.cjs && tsc --noEmit"
+    "check:v370": "node scripts/V370_UPGRADE_AUDIT.cjs && node scripts/FINANCE_ENGINE_V342_TEST.cjs && node scripts/FORMULA_ENGINE_V342_TEST.cjs && node scripts/V340_FIX1_REGRESSION_AUDIT.cjs && node scripts/DIVIDEND_CUTOFF_TEST.cjs && tsc --noEmit",
+    "test:360": "npx --yes vitest@3.2.4 run tests/360-v2"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
