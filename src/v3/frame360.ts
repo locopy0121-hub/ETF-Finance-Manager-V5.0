@@ -168,6 +168,8 @@ export type Frame360DataCell = {
   id: string;
   targetNodeId?: string;
   nodeLabel?: string;
+  /** Runtime value captured from the actual edited location for preview only. */
+  previewValue?: unknown;
   /** Native bindings are protected until the user explicitly unlocks the source. */
   sourceLocked?: boolean;
   rowStart: number;
