@@ -136,8 +136,10 @@ for (const token of [
   }
 }
 
-if (editor.includes('文字格') || editor.includes('資料格') || editor.includes('圖表格')) {
-  fail('360 editor still exposes deprecated Cell terminology');
+for (const token of ['文字格', '圖片格', '圖示格', '圖表格', '提醒格', '組件格', '容器格', '空白格', '資料格內', '資料格：', '資料格，', '資料格。']) {
+  if (editor.includes(token)) {
+    fail(`360 editor still exposes deprecated Cell terminology: ${token}`);
+  }
 }
 if (editor.includes('顏色規則（互相獨立）')) {
   fail('360 editor still exposes the deprecated separate color-rule panel');
