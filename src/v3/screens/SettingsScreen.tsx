@@ -1270,6 +1270,7 @@ export function SettingsScreen({
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
+      <PageFrame prefs={prefs} page="settings" cardId="settings-header">
       <View style={styles.header}>
         <Text style={styles.eyebrow}>360 設定控制中心</Text>
         <Text style={styles.pageTitle}>設定與頁面編輯器</Text>
@@ -1311,6 +1312,7 @@ export function SettingsScreen({
           {isEditModeActive ? '360 編輯模式已啟用' : '一般瀏覽模式'}
         </Text>
       </View>
+      </PageFrame>
 
       <PageFrame prefs={prefs} page="settings" cardId="settings-main">
       <View style={styles.toolboxList}>
