@@ -405,6 +405,21 @@ export default function Frame360EditorModal({
     });
   };
 
+  const setBlockLocked = (cellId: string, locked: boolean) => {
+    if (editorLocked) return;
+    setDraft(current => {
+      if (!current) return current;
+      return {
+        ...current,
+        blocks: current.blocks.map(cell =>
+          cell.id === cellId
+            ? { ...cell, layout: { ...getDefaultLayout(cell), locked } }
+            : cell,
+        ),
+      };
+    });
+  };
+
   const nudgeBlock = (cellId: string, dx: number, dy: number) =>
     updateBlockLayout(cellId, layout => {
       const step = layout.nudgeStep ?? 1;
@@ -1244,10 +1259,11 @@ export default function Frame360EditorModal({
                     <Text style={styles.choiceText}>自由方塊</Text>
                   </Pressable>
                   <Pressable
-                    onPress={() => updateBlockLayout(deepCell.id, layout => ({ ...layout, locked: !layout.locked }))}
-                    style={[styles.choice, deepCell.layout?.locked && styles.choiceActive]}
+                    disabled={editorLocked}
+                    onPress={() => setBlockLocked(deepCell.id, !Boolean(deepCell.layout?.locked))}
+                    style={[styles.choice, deepCell.layout?.locked && styles.choiceActive, editorLocked && styles.disabled]}
                   >
-                    <Text style={styles.choiceText}>{deepCell.layout?.locked ? '🔒 方塊已鎖' : '🔓 鎖定方塊'}</Text>
+                    <Text style={styles.choiceText}>{deepCell.layout?.locked ? '🔒 方塊已鎖（點擊解鎖）' : '🔓 鎖定方塊'}</Text>
                   </Pressable>
                 </View>
 
@@ -1319,20 +1335,21 @@ export default function Frame360EditorModal({
 
                 <Text style={styles.deepLabel}>位置微調</Text>
                 <View style={styles.nudgePad}>
-                  <Pressable style={styles.nudgeButton} onPress={() => nudgeBlock(deepCell.id, 0, -1)}><Text style={styles.nudgeText}>↑</Text></Pressable>
+                  <Pressable disabled={editorLocked || Boolean(deepCell.layout?.locked)} style={[styles.nudgeButton, (editorLocked || Boolean(deepCell.layout?.locked)) && styles.disabled]} onPress={() => nudgeBlock(deepCell.id, 0, -1)}><Text style={styles.nudgeText}>↑</Text></Pressable>
                   <View style={styles.nudgeMiddle}>
-                    <Pressable style={styles.nudgeButton} onPress={() => nudgeBlock(deepCell.id, -1, 0)}><Text style={styles.nudgeText}>←</Text></Pressable>
+                    <Pressable disabled={editorLocked || Boolean(deepCell.layout?.locked)} style={[styles.nudgeButton, (editorLocked || Boolean(deepCell.layout?.locked)) && styles.disabled]} onPress={() => nudgeBlock(deepCell.id, -1, 0)}><Text style={styles.nudgeText}>←</Text></Pressable>
                     <Text style={styles.stepValue}>{getDefaultLayout(deepCell).nudgeStep ?? 1}px</Text>
-                    <Pressable style={styles.nudgeButton} onPress={() => nudgeBlock(deepCell.id, 1, 0)}><Text style={styles.nudgeText}>→</Text></Pressable>
+                    <Pressable disabled={editorLocked || Boolean(deepCell.layout?.locked)} style={[styles.nudgeButton, (editorLocked || Boolean(deepCell.layout?.locked)) && styles.disabled]} onPress={() => nudgeBlock(deepCell.id, 1, 0)}><Text style={styles.nudgeText}>→</Text></Pressable>
                   </View>
-                  <Pressable style={styles.nudgeButton} onPress={() => nudgeBlock(deepCell.id, 0, 1)}><Text style={styles.nudgeText}>↓</Text></Pressable>
+                  <Pressable disabled={editorLocked || Boolean(deepCell.layout?.locked)} style={[styles.nudgeButton, (editorLocked || Boolean(deepCell.layout?.locked)) && styles.disabled]} onPress={() => nudgeBlock(deepCell.id, 0, 1)}><Text style={styles.nudgeText}>↓</Text></Pressable>
                 </View>
                 <View style={styles.choiceWrap}>
                   {[1, 2, 4, 8].map(step => (
                     <Pressable
                       key={step}
+                      disabled={editorLocked || Boolean(deepCell.layout?.locked)}
                       onPress={() => updateBlockLayout(deepCell.id, layout => ({ ...layout, nudgeStep: step }))}
-                      style={[styles.choice, (getDefaultLayout(deepCell).nudgeStep ?? 1) === step && styles.choiceActive]}
+                      style={[styles.choice, (getDefaultLayout(deepCell).nudgeStep ?? 1) === step && styles.choiceActive, (editorLocked || Boolean(deepCell.layout?.locked)) && styles.disabled]}
                     >
                       <Text style={styles.choiceText}>{step}px</Text>
                     </Pressable>
