@@ -81,6 +81,8 @@ for (const token of [
   '公式 / 運算式',
   '顏色規則',
   '顯示狀態',
+  'Android Elevation',
+  '特效',
 ]) {
   if (!editor.includes(token)) {
     fail(`360 editor missing V5 interaction contract: ${token}`);
@@ -124,6 +126,7 @@ for (const token of [
   'describeVisibleNodes',
   'applyGlobal360NodeStyles',
   'global360.openFrame',
+  'frame:root',
   'accessibilityHint="長按進入此區塊的 360 編輯器"',
 ]) {
   if (!pageRuntime.includes(token)) {
@@ -140,6 +143,7 @@ for (const token of [
   'formatDataValue',
   'resolveDataColor',
   'cell.style.visible === false',
+  'RuntimeCellSurface',
 ]) {
   if (!runtime.includes(token)) {
     fail(`360 runtime missing deep feature: ${token}`);
