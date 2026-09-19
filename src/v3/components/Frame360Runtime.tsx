@@ -313,11 +313,16 @@ export default function Frame360Runtime({
 }: Props) {
   const rowHeight = minHeight / template.grid.rows;
   const cells = useMemo(
-    () => [...template.grid.dataCells].sort((a, b) =>
-      a.rowStart === b.rowStart
-        ? a.columnStart - b.columnStart
-        : a.rowStart - b.rowStart,
-    ),
+    () => template.grid.dataCells
+      .filter(cell => cell.content.kind !== 'empty' || Boolean(cell.targetNodeId))
+      .slice()
+      .sort((a, b) => {
+        const z = (a.layout?.zIndex ?? 0) - (b.layout?.zIndex ?? 0);
+        if (z !== 0) return z;
+        return a.rowStart === b.rowStart
+          ? a.columnStart - b.columnStart
+          : a.rowStart - b.rowStart;
+      }),
     [template],
   );
 
