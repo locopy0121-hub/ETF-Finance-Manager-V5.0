@@ -530,7 +530,7 @@ export default function Frame360Runtime({
             cell={cell}
             style={{
               left: `${left}%`,
-              top: free ? `${top}%` : `${top}%`,
+              top: `${top}%`,
               width: `${width}%`,
               zIndex: cell.layout?.zIndex ?? 0,
               height,
@@ -552,6 +552,7 @@ export default function Frame360Runtime({
               cell={cell}
               data={data}
               reminderContext={reminderContext}
+              profitLossColors={profitLossColors}
             />
           </RuntimeCellSurface>
         );
