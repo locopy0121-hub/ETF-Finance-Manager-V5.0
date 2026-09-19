@@ -23,6 +23,7 @@ import {
   FRAME360_COMPONENTS,
   FRAME360_REMINDERS,
   frame360CellTypeLabel,
+  frame360ComponentLabel,
 } from '../frame360Registry';
 
 type Props = {
@@ -86,19 +87,22 @@ export default function Frame360EditorModal({
       Alert.alert(
         '選擇提醒資料',
         '提醒條件成立時才會顯示物件；未成立時保留格線但不顯示提醒。',
-        FRAME360_REMINDERS.map(item => ({
-          text: item.label,
-          onPress: () =>
-            replaceCell(cellId, cell => ({
-              ...cell,
-              content: {
-                kind: 'reminder',
-                source: item.source,
-                activeLabel: item.activeLabel,
-                effect: 'breathe',
-              },
-            })),
-        })).concat([{ text: '取消', style: 'cancel' as const }]),
+        [
+          ...FRAME360_REMINDERS.map(item => ({
+            text: item.label,
+            onPress: () =>
+              replaceCell(cellId, cell => ({
+                ...cell,
+                content: {
+                  kind: 'reminder' as const,
+                  source: item.source,
+                  activeLabel: item.activeLabel,
+                  effect: 'breathe' as const,
+                },
+              })),
+          })),
+          { text: '取消', style: 'cancel' as const },
+        ],
       );
       return;
     }
@@ -108,14 +112,17 @@ export default function Frame360EditorModal({
       Alert.alert(
         '選擇組件',
         '組件會成為此資料格內的獨立子根。',
-        FRAME360_COMPONENTS.map(item => ({
-          text: item.label,
-          onPress: () =>
-            replaceCell(cellId, cell => ({
-              ...cell,
-              content: { kind: 'component', component: item.kind },
-            })),
-        })).concat([{ text: '取消', style: 'cancel' as const }]),
+        [
+          ...FRAME360_COMPONENTS.map(item => ({
+            text: item.label,
+            onPress: () =>
+              replaceCell(cellId, cell => ({
+                ...cell,
+                content: { kind: 'component' as const, component: item.kind },
+              })),
+          })),
+          { text: '取消', style: 'cancel' as const },
+        ],
       );
       return;
     }
@@ -304,7 +311,11 @@ export default function Frame360EditorModal({
                         ) : null}
                         {cell.content.kind === 'component' ? (
                           <Text style={styles.cellPreview}>
-                            {FRAME360_COMPONENTS.find(item => item.kind === cell.content.component)?.label}
+                            {frame360ComponentLabel(
+                            cell.content.kind === 'component'
+                              ? cell.content.component
+                              : 'summary',
+                          )}
                           </Text>
                         ) : null}
                       </Pressable>
