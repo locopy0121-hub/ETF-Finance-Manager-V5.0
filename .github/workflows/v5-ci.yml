@@ -1,4 +1,4 @@
-name: V5.0 Continuous Verification
+name: V5.0.1 Continuous Verification
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   verify:
-    name: Verify V5.0 source
+    name: Verify V5.0.1 source
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -37,16 +37,16 @@ jobs:
       - name: TypeScript strict check
         run: npx tsc --noEmit
 
-      - name: Verify V5.0 version chain
+      - name: Verify V5.0.1 version chain
         shell: bash
         run: |
           set -euo pipefail
-          grep -F '"version": "5.0.0"' package.json
-          grep -F '"version": "5.0.0"' app.json
-          grep -F '"runtimeVersion": "5.0.0"' app.json
-          grep -F "APP_SEMVER='5.0.0'" src/v3/version.ts
-          grep -F 'versionName "5.0.0"' android/app/build.gradle
-          grep -F 'ETF財務管家 V5.0.0 NATIVE' android/app/src/main/res/values/strings.xml
+          grep -F '"version": "5.0.1"' package.json
+          grep -F '"version": "5.0.1"' app.json
+          grep -F '"runtimeVersion": "5.0.1"' app.json
+          grep -F "APP_SEMVER='5.0.1'" src/v3/version.ts
+          grep -F 'versionName "5.0.1"' android/app/build.gradle
+          grep -F 'ETF財務管家 V5.0.1 NATIVE' android/app/src/main/res/values/strings.xml
           grep -F 'V5.0 正式上線：全藍圖 B UI 重構、7x5/7x6 智慧股息月曆、獨立 5 大 Tab 導覽與全方位連網 AI 助理' README.md
 
       - name: Source diff integrity
