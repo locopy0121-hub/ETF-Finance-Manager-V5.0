@@ -6,6 +6,7 @@ import type { TradeMode } from '../types/etf';
 import type { BrokerProfile } from '../data/brokerProfiles';
 import type { UniversalEditorNode } from '../ui/editorSchema';
 import type { PageFieldKey } from './pageRegistry';
+import type { Frame360Template } from './frame360';
 export type { PageFieldKey } from './pageRegistry';
 
 export type LedgerKind = 'buy' | 'sell' | 'dividend' | 'cashIn' | 'cashOut';
@@ -203,6 +204,7 @@ export type V3Preferences = {
   // Presentation-only: never use this list in accounting or portfolio formulas.
   watchlistSymbols:string[];
   editorNodes:Record<string,UniversalEditorNode>;
+  frame360Templates?:Record<string,Frame360Template>;
   holdingFocusSort:'custom'|'marketValue'|'pnl'|'todayPnl';
   holdingFocusMax:number;
   holdingFocusOnDashboard:boolean;
@@ -317,6 +319,7 @@ export const defaultV3Preferences: V3Preferences = {
   selectedEtfSymbols: [],
   watchlistSymbols:[],
   editorNodes:{},
+  frame360Templates:{},
   holdingFocusSort:'custom',
   holdingFocusMax:8,
   holdingFocusOnDashboard:true,
