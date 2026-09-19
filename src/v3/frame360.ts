@@ -215,7 +215,7 @@ export type Frame360Grid = {
   /** @deprecated V5.0.8+: guide/migration compatibility only. Never use as content storage. */
   columns: number;
   baseCells: Frame360BaseCell[];
-  /** @deprecated Legacy Cell payload used only while migrating persisted layouts. */
+  /** @deprecated Deprecated Cell payload used only while migrating persisted layouts. */
   dataCells: Frame360Block[];
 };
 
@@ -229,7 +229,7 @@ export type Frame360Template = {
   canvas: Frame360Canvas;
   /** C layer: canonical visual objects. Grid/Cell is never the parent of a Block. */
   blocks: Frame360Block[];
-  /** Legacy guide/migration payload. Runtime/editor must not use this as content storage. */
+  /** Deprecated guide/migration payload. Runtime/editor must not use this as content storage. */
   grid: Frame360Grid;
   updatedAt: number;
   locked?: boolean;
@@ -264,7 +264,7 @@ export const DEFAULT_FRAME360_STYLE: Frame360CellStyle = {
 
 const makeCellId = (row: number, column: number) => `r${row}c${column}`;
 
-/** Legacy-only cell grid factory. New frames use createFrame360GuideGrid instead. */
+/** Deprecated cell grid factory. New frames use createFrame360GuideGrid instead. */
 export function createFrame360Grid(rows: number, columns: number): Frame360Grid {
   if (!Number.isInteger(rows) || !Number.isInteger(columns) || rows < 1 || columns < 1) {
     throw new Error('格線列數與欄數必須為正整數');
