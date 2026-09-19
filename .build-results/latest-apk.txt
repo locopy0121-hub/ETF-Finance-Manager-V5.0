@@ -1,6 +1,6 @@
 status=failure
-run_id=35432614187
-source_commit=d4c49e62810ef4653a9f02f6ae8acaece7bd2c49
+run_id=35432720319
+source_commit=cd58225670a601526b00be1cd16553bb378a34e6
 artifact_name=ETF-Finance-Manager-V5.0.0-BlueprintB-Final-ARM64
 versionName=5.0.0
 versionCode=50000
