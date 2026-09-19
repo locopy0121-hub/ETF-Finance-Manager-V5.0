@@ -12,15 +12,15 @@ export type Frame360CellTypeDefinition = {
 };
 
 export const FRAME360_CELL_TYPES: Frame360CellTypeDefinition[] = [
-  { kind: 'empty', label: '空白格', description: '保留格線，不顯示內容', opensEditor: false },
-  { kind: 'text', label: '文字格', description: '顯示自訂文字', opensEditor: true },
-  { kind: 'data', label: '資料格', description: '連接框架目前資料實例', opensEditor: true },
-  { kind: 'image', label: '圖片格', description: '顯示圖片內容', opensEditor: true },
-  { kind: 'icon', label: '圖示格', description: '顯示圖示內容', opensEditor: true },
-  { kind: 'chart', label: '圖表格', description: '顯示圖表內容', opensEditor: true },
-  { kind: 'reminder', label: '提醒格', description: '條件成立時才顯示提醒物件', opensEditor: true },
-  { kind: 'component', label: '組件格', description: '放入完整功能組件', opensEditor: true },
-  { kind: 'container', label: '容器格', description: '建立可巢狀的子框架', opensEditor: true },
+  { kind: 'empty', label: '空白方塊', description: '保留格線，不顯示內容', opensEditor: false },
+  { kind: 'text', label: '文字方塊', description: '顯示自訂文字', opensEditor: true },
+  { kind: 'data', label: '資料方塊', description: '連接框架目前資料實例', opensEditor: true },
+  { kind: 'image', label: '圖片方塊', description: '顯示圖片內容', opensEditor: true },
+  { kind: 'icon', label: '圖示方塊', description: '顯示圖示內容', opensEditor: true },
+  { kind: 'chart', label: '圖表方塊', description: '顯示圖表內容', opensEditor: true },
+  { kind: 'reminder', label: '提醒方塊', description: '條件成立時才顯示提醒物件', opensEditor: true },
+  { kind: 'component', label: '組件方塊', description: '放入完整功能組件', opensEditor: true },
+  { kind: 'container', label: '容器方塊', description: '建立可巢狀的子框架', opensEditor: true },
 ];
 
 export type Frame360ReminderDefinition = {
@@ -44,7 +44,7 @@ export type Frame360ComponentDefinition = {
 
 export const FRAME360_COMPONENTS: Frame360ComponentDefinition[] = [
   { kind: 'calendar', label: '月曆', description: '完整月曆小組件' },
-  { kind: 'ticker', label: '跑馬燈', description: '可在資料格內顯示連續資訊' },
+  { kind: 'ticker', label: '跑馬燈', description: '可在資料方塊內顯示連續資訊' },
   { kind: 'summary', label: '摘要', description: '摘要型資訊組件' },
   { kind: 'list', label: '清單', description: '列表型資訊組件' },
   { kind: 'progress', label: '進度', description: '進度條或進度環組件' },
