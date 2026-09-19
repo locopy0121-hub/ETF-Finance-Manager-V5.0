@@ -76,6 +76,7 @@ export type Frame360CellStyle = {
   shadowOpacity?: number;
   shadowRadius?: number;
   elevation?: number;
+  effect?: Frame360Effect;
   visible?: boolean;
 };
 
@@ -156,6 +157,7 @@ export const DEFAULT_FRAME360_STYLE: Frame360CellStyle = {
   shadowOpacity: 0,
   shadowRadius: 0,
   elevation: 0,
+  effect: 'none',
   visible: true,
 };
 
