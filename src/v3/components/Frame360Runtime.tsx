@@ -70,6 +70,55 @@ function ReminderObject({
   );
 }
 
+function evaluateFormula(
+  formula: string,
+  data: Props['data'],
+): number | undefined {
+  const expression = formula.replace(/\b[A-Za-z_][A-Za-z0-9_]*\b/g, token => {
+    const value = Number(data[token]);
+    return Number.isFinite(value) ? String(value) : '0';
+  });
+  if (!/^[0-9+\-*/().\s]+$/.test(expression)) return undefined;
+  try {
+    const value = Function(`"use strict"; return (${expression});`)();
+    return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function formatDataValue(
+  value: string | number | undefined,
+  format: 'text' | 'number' | 'currency' | 'percent' = 'text',
+) {
+  if (value === undefined) return '—';
+  if (format === 'text') return String(value);
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return String(value);
+  if (format === 'percent') return `${numeric.toFixed(2)}%`;
+  return numeric.toLocaleString('zh-TW', {
+    maximumFractionDigits: format === 'currency' ? 0 : 4,
+  });
+}
+
+function resolveDataColor(
+  cell: Frame360DataCell,
+  value: string | number | undefined,
+) {
+  if (cell.content.kind !== 'data') return cell.style.textColor;
+  const rule = cell.content.colorRule ?? 'auto';
+  if (rule === 'fixed') return cell.style.textColor;
+  if (rule === 'pnl' || rule === 'market') {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) {
+      if (numeric > 0) return '#DC2626';
+      if (numeric < 0) return '#16A34A';
+      return '#CA8A04';
+    }
+  }
+  return cell.style.textColor;
+}
+
 function CellContent({
   cell,
   data,
@@ -84,12 +133,41 @@ function CellContent({
 
   const content = cell.content;
   if (content.kind === 'empty') return null;
+  const textStyle = {
+    color: cell.style.textColor ?? '#0F172A',
+    fontSize: cell.style.fontSize ?? 12,
+    fontWeight: cell.style.fontWeight ?? '700',
+    letterSpacing: cell.style.letterSpacing ?? 0,
+    lineHeight: cell.style.lineHeight,
+    textAlign: (
+      cell.style.alignment.includes('Right')
+        ? 'right'
+        : cell.style.alignment.includes('Left')
+          ? 'left'
+          : 'center'
+    ) as 'left' | 'center' | 'right',
+  };
+
   if (content.kind === 'text') {
-    return <Text style={styles.value}>{content.text}</Text>;
+    return <Text style={[styles.value, textStyle]}>{content.text}</Text>;
   }
   if (content.kind === 'data') {
-    const raw = data[content.binding];
-    return <Text style={styles.value}>{raw === undefined ? '—' : String(raw)}</Text>;
+    const raw = content.formula
+      ? evaluateFormula(content.formula, data)
+      : data[content.binding];
+    const color = resolveDataColor(cell, raw);
+    return (
+      <View>
+        {content.label ? (
+          <Text style={[styles.dataLabel, textStyle, color ? { color } : null]}>
+            {content.label}
+          </Text>
+        ) : null}
+        <Text style={[styles.value, textStyle, color ? { color } : null]}>
+          {formatDataValue(raw, content.format)}
+        </Text>
+      </View>
+    );
   }
   if (content.kind === 'reminder') {
     return (
@@ -142,6 +220,7 @@ export default function Frame360Runtime({
   return (
     <View style={[styles.root, { minHeight }]}>
       {cells.map(cell => {
+        if (cell.style.visible === false) return null;
         const left = ((cell.columnStart - 1) / template.grid.columns) * 100;
         const top = ((cell.rowStart - 1) / template.grid.rows) * 100;
         const width = (cell.columnSpan / template.grid.columns) * 100;
@@ -151,6 +230,12 @@ export default function Frame360Runtime({
             ? 'flex-end'
             : cell.style.alignment.includes('Left')
               ? 'flex-start'
+              : 'center';
+        const justify =
+          cell.style.alignment.startsWith('top')
+            ? 'flex-start'
+            : cell.style.alignment.startsWith('bottom')
+              ? 'flex-end'
               : 'center';
 
         return (
@@ -164,12 +249,17 @@ export default function Frame360Runtime({
                 width: `${width}%`,
                 height,
                 alignItems: align,
+                justifyContent: justify,
                 padding: cell.style.padding ?? 8,
+                margin: cell.style.margin ?? 0,
                 borderRadius: cell.style.radius ?? 8,
                 opacity: (cell.style.opacity ?? 100) / 100,
                 backgroundColor: cell.style.backgroundColor ?? 'transparent',
                 borderColor: cell.style.borderColor ?? 'transparent',
                 borderWidth: cell.style.borderWidth ?? 0,
+                shadowOpacity: cell.style.shadowOpacity ?? 0,
+                shadowRadius: cell.style.shadowRadius ?? 0,
+                elevation: cell.style.elevation ?? 0,
               },
             ]}
           >
@@ -198,6 +288,12 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontSize: 12,
     fontWeight: '800',
+  },
+  dataLabel: {
+    color: '#64748B',
+    fontSize: 9,
+    fontWeight: '700',
+    marginBottom: 2,
   },
   reminderPill: {
     borderRadius: 999,
