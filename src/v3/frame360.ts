@@ -57,13 +57,34 @@ export type Frame360ComponentKind =
   | 'progress'
   | 'status';
 
-export type Frame360ColorRule = 'auto' | 'fixed' | 'pnl' | 'market';
+export type Frame360ColorRule = 'auto' | 'fixed' | 'theme' | 'pnl' | 'market';
+
+export type Frame360BlockLayout = {
+  mode?: 'grid' | 'free';
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  minWidth?: number;
+  maxWidth?: number;
+  minHeight?: number;
+  maxHeight?: number;
+  lockAspectRatio?: boolean;
+  locked?: boolean;
+  zIndex?: number;
+  nudgeStep?: number;
+};
 
 export type Frame360CellStyle = {
   alignment: Frame360Alignment;
   backgroundColor?: string;
   textColor?: string;
+  textBackgroundColor?: string;
   borderColor?: string;
+  textColorRule?: Frame360ColorRule;
+  textBackgroundColorRule?: Frame360ColorRule;
+  backgroundColorRule?: Frame360ColorRule;
+  borderColorRule?: Frame360ColorRule;
   borderWidth?: number;
   radius?: number;
   opacity?: number;
@@ -120,6 +141,7 @@ export type Frame360DataCell = {
   baseCellIds: string[];
   content: Frame360CellContent;
   style: Frame360CellStyle;
+  layout?: Frame360BlockLayout;
 };
 
 export type Frame360Grid = {
@@ -137,6 +159,8 @@ export type Frame360Template = {
   version: number;
   grid: Frame360Grid;
   updatedAt: number;
+  locked?: boolean;
+  allowOverlap?: boolean;
 };
 
 export type Frame360Instance = {
@@ -159,6 +183,10 @@ export const DEFAULT_FRAME360_STYLE: Frame360CellStyle = {
   elevation: 0,
   effect: 'none',
   visible: true,
+  textColorRule: 'fixed',
+  textBackgroundColorRule: 'fixed',
+  backgroundColorRule: 'fixed',
+  borderColorRule: 'fixed',
 };
 
 const makeCellId = (row: number, column: number) => `r${row}c${column}`;
