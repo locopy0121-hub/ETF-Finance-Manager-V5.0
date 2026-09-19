@@ -1,10 +1,13 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import {
   Animated,
+  Image,
+  ImageBackground,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import Svg, { Polygon, Polyline, Rect } from 'react-native-svg';
 
 import type {
   Frame360DataCell,
@@ -19,7 +22,7 @@ import { frame360ComponentLabel } from '../frame360Registry';
 
 type Props = {
   template: Frame360Template;
-  data: Record<string, string | number | undefined>;
+  data: Record<string, unknown>;
   reminderContext: Frame360ReminderContext;
   minHeight?: number;
 };
@@ -88,7 +91,7 @@ function evaluateFormula(
 }
 
 function formatDataValue(
-  value: string | number | undefined,
+  value: unknown,
   format: 'text' | 'number' | 'currency' | 'percent' = 'text',
 ) {
   if (value === undefined) return '—';
@@ -103,7 +106,7 @@ function formatDataValue(
 
 function resolveRuleColor(
   rule: 'auto' | 'fixed' | 'theme' | 'pnl' | 'market' | undefined,
-  value: string | number | undefined,
+  value: unknown,
   fixed: string | undefined,
   surface: 'text' | 'background' | 'border' = 'text',
 ) {
@@ -126,6 +129,75 @@ function resolveDataValue(cell: Frame360DataCell, data: Props['data']) {
   return cell.content.formula
     ? evaluateFormula(cell.content.formula, data)
     : data[cell.content.binding];
+}
+
+function numericSeries(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(item => {
+      if (typeof item === 'number') return item;
+      if (item && typeof item === 'object' && 'value' in item) {
+        return Number((item as { value?: unknown }).value);
+      }
+      return Number(item);
+    })
+    .filter(item => Number.isFinite(item));
+}
+
+function MiniChart({
+  type,
+  values,
+  color,
+}: {
+  type: string;
+  values: number[];
+  color: string;
+}) {
+  if (values.length < 2) {
+    return <Text style={styles.placeholder}>尚無可繪製的圖表資料</Text>;
+  }
+  const width = 180;
+  const height = 72;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = Math.max(0.0001, max - min);
+  const points = values.map((value, index) => {
+    const x = (index / Math.max(1, values.length - 1)) * width;
+    const y = height - ((value - min) / span) * (height - 8) - 4;
+    return { x, y };
+  });
+  const pointText = points.map(point => `${point.x},${point.y}`).join(' ');
+  if (type === 'bar') {
+    const barWidth = width / values.length;
+    return (
+      <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
+        {points.map((point, index) => (
+          <Rect
+            key={index}
+            x={index * barWidth + 1}
+            y={point.y}
+            width={Math.max(1, barWidth - 2)}
+            height={Math.max(1, height - point.y)}
+            fill={color}
+          />
+        ))}
+      </Svg>
+    );
+  }
+  if (type === 'area') {
+    const areaPoints = `0,${height} ${pointText} ${width},${height}`;
+    return (
+      <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
+        <Polygon points={areaPoints} fill={color} opacity={0.18} />
+        <Polyline points={pointText} fill="none" stroke={color} strokeWidth={2} />
+      </Svg>
+    );
+  }
+  return (
+    <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
+      <Polyline points={pointText} fill="none" stroke={color} strokeWidth={2} />
+    </Svg>
+  );
 }
 
 function CellContent({
@@ -209,10 +281,44 @@ function CellContent({
     return <Text style={styles.value}>{content.icon}</Text>;
   }
   if (content.kind === 'chart') {
-    return <Text style={styles.placeholder}>圖表</Text>;
+    const primaryBinding = content.yBindings?.[0] ?? content.binding;
+    const values = numericSeries(data[primaryBinding]);
+    return (
+      <View style={styles.chartBox}>
+        <MiniChart
+          type={content.chartType}
+          values={values}
+          color={cell.style.textColor ?? '#0066FF'}
+        />
+      </View>
+    );
   }
   if (content.kind === 'image') {
-    return <Text style={styles.placeholder}>圖片</Text>;
+    if (!content.uri) return <Text style={styles.placeholder}>尚未選擇圖片</Text>;
+    const resizeMode =
+      content.fit === 'original'
+        ? 'center'
+        : content.fit === 'repeat'
+          ? 'repeat'
+          : content.fit ?? 'cover';
+    return (
+      <Image
+        source={{ uri: content.uri }}
+        resizeMode={resizeMode as any}
+        style={[
+          styles.contentImage,
+          {
+            opacity: (content.opacity ?? 100) / 100,
+            transform: [
+              { translateX: content.x ?? 0 },
+              { translateY: content.y ?? 0 },
+              { scale: content.scale ?? 1 },
+              { rotate: `${content.rotation ?? 0}deg` },
+            ],
+          },
+        ]}
+      />
+    );
   }
   if (content.kind === 'container') {
     return <Text style={styles.placeholder}>子框架</Text>;
@@ -298,9 +404,40 @@ function RuntimeCellSurface({
           ? undefined
           : { opacity: value };
 
+  const backgroundUri = cell.style.backgroundImageUri;
+  const backgroundFit = cell.style.backgroundImageFit ?? 'cover';
+  const resizeMode =
+    backgroundFit === 'original'
+      ? 'center'
+      : backgroundFit === 'repeat'
+        ? 'repeat'
+        : backgroundFit;
   return (
     <Animated.View style={[styles.cell, style, animatedStyle]}>
-      {children}
+      {backgroundUri ? (
+        <ImageBackground
+          source={{ uri: backgroundUri }}
+          resizeMode={resizeMode as any}
+          style={styles.backgroundImage}
+          imageStyle={{ opacity: (cell.style.backgroundImageOpacity ?? 100) / 100 }}
+        >
+          {cell.style.backgroundOverlayColor ? (
+            <View
+              pointerEvents="none"
+              style={[
+                StyleSheet.absoluteFillObject,
+                {
+                  backgroundColor: cell.style.backgroundOverlayColor,
+                  opacity: (cell.style.backgroundOverlayOpacity ?? 0) / 100,
+                },
+              ]}
+            />
+          ) : null}
+          {children}
+        </ImageBackground>
+      ) : (
+        children
+      )}
     </Animated.View>
   );
 }
@@ -453,5 +590,14 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 9,
     fontWeight: '700',
+  },
+  chartBox: { width: '100%', minHeight: 72, justifyContent: 'center' },
+  contentImage: { width: '100%', height: '100%' },
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    alignItems: 'inherit' as any,
+    justifyContent: 'inherit' as any,
   },
 });
