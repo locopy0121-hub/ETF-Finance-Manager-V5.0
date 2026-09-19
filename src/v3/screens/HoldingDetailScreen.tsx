@@ -97,6 +97,7 @@ export function HoldingDetailScreen({
   return (
     <FontScaleScope prefs={common.prefs}>
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <PageFrame prefs={common.prefs} page="detail" cardId="detail-header">
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.circleButton}><Text style={styles.circleText}>‹</Text></Pressable>
         <View style={{ flex: 1 }}>
@@ -109,6 +110,7 @@ export function HoldingDetailScreen({
         ) : null}
         <Pressable onPress={onSettings} style={styles.circleButton}><Text style={styles.circleText}>⚙</Text></Pressable>
       </View>
+      </PageFrame>
 
       <PageFrame prefs={common.prefs} page="detail" cardId="detail-summary">
         <View style={styles.hero}>
