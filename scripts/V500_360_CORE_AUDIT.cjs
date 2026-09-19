@@ -77,7 +77,11 @@ for (const token of [
   'setDeepDialog(true)',
   '即時預覽框',
   '<Frame360Runtime',
-  '公式 / 運算式',
+  '資料來源與技術識別碼已隱藏',
+  '儲存並上鎖',
+  '位置微調',
+  '自由圖層 ON',
+  '文字背景顏色',
   '顏色規則',
   '顯示狀態',
   'Android Elevation',
@@ -140,7 +144,7 @@ const runtime = fs.readFileSync(
 for (const token of [
   'evaluateFormula',
   'formatDataValue',
-  'resolveDataColor',
+  'resolveRuleColor',
   'cell.style.visible === false',
   'RuntimeCellSurface',
 ]) {
