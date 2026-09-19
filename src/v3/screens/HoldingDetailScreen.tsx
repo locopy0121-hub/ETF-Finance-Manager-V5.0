@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { calculateHoldingView } from '../engine';
-import { pageFieldsForFrame, PageFrame } from '../pageRuntime';
+import { pageFieldsForFrame, PageAddedFrames, PageFrame } from '../pageRuntime';
 import { V3_THEME, resolvePnlTone } from '../theme';
 import FontScaleScope from '../components/FontScaleScope';
 import type { ScreenCommon } from '../screensBase';
@@ -131,6 +131,7 @@ export function HoldingDetailScreen({
           ))}
         </View>
       </PageFrame>
+      <PageAddedFrames prefs={common.prefs} page="detail" />
     </ScrollView>
     </FontScaleScope>
   );
