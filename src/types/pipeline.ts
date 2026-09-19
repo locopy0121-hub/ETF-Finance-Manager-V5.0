@@ -33,10 +33,14 @@ export type PipelineExecutionResult =
       readonly errorContext: { readonly errorCode: string };
     };
 
-export type PipelineValidationResult = Extract<
-  PipelineExecutionResult,
-  { readonly transactionOutcome: 'BLOCKED' }
->;
+export interface PipelineValidationResult {
+  readonly transactionOutcome: 'BLOCKED';
+  readonly errorContext: {
+    readonly errorCode: string;
+    readonly diagnosticEventId?: string;
+  };
+  readonly wrapUpOutcome: 'RETAIN_FROZEN_DRAFT';
+}
 
 export type SessionWrapUpCommand =
   | 'SUCCESS_CONTINUE'
