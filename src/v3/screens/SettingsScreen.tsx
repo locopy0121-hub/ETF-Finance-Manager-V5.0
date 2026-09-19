@@ -1283,7 +1283,7 @@ export function SettingsScreen({
         <View style={styles.editModeText}>
           <Text style={styles.editModeTitle}>頁面編輯模式</Text>
           <Text style={styles.editModeSubtitle}>
-            開啟後，全 App 卡片可顯示 ⚙️ 編輯入口
+            開啟後，全 App 可配置 UI 進入 Global 360；長按框架即可編輯
           </Text>
         </View>
         <Switch
@@ -1309,7 +1309,7 @@ export function SettingsScreen({
           ]}
         />
         <Text style={styles.statusText}>
-          {isEditModeActive ? '360 編輯模式已啟用' : '一般瀏覽模式'}
+          {isEditModeActive ? 'Global 360 編輯模式已啟用' : '一般瀏覽模式'}
         </Text>
       </View>
       </PageFrame>
