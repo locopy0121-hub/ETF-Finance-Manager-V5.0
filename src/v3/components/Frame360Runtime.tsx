@@ -107,7 +107,7 @@ function formatDataValue(
   });
 }
 
-function resolveRuleColor(
+export function resolveFrame360RuleColor(
   rule: 'auto' | 'fixed' | 'theme' | 'pnl' | 'market' | undefined,
   value: unknown,
   fixed: string | undefined,
@@ -248,14 +248,14 @@ function CellContent({
   }
   if (content.kind === 'data') {
     const raw = resolveDataValue(cell, data);
-    const color = resolveRuleColor(
+    const color = resolveFrame360RuleColor(
       cell.style.textColorRule ?? content.colorRule ?? 'auto',
       raw,
       cell.style.textColor,
       'text',
       profitLossColors,
     );
-    const textBackgroundColor = resolveRuleColor(
+    const textBackgroundColor = resolveFrame360RuleColor(
       cell.style.textBackgroundColorRule,
       raw,
       cell.style.textBackgroundColor,
@@ -497,14 +497,14 @@ export default function Frame360Runtime({
         const width = cell.layout?.width ?? 20;
         const height = ((cell.layout?.height ?? 12) / 100) * minHeight;
         const rawForColor = resolveDataValue(cell, data);
-        const backgroundColor = resolveRuleColor(
+        const backgroundColor = resolveFrame360RuleColor(
           cell.style.backgroundColorRule,
           rawForColor,
           cell.style.backgroundColor,
           'background',
           profitLossColors,
         );
-        const borderColor = resolveRuleColor(
+        const borderColor = resolveFrame360RuleColor(
           cell.style.borderColorRule,
           rawForColor,
           cell.style.borderColor,
