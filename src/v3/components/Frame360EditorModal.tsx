@@ -17,11 +17,9 @@ import {
   appendFrame360Block,
   migrateFrame360CellsToBlocks,
   resizeFrame360Workspace,
-  mergeFrame360Cells,
-  splitFrame360Cell,
   type Frame360Alignment,
   type Frame360CellKind,
-  type Frame360DataCell,
+  type Frame360Block,
   type Frame360Template,
 } from '../frame360';
 import Frame360Runtime from './Frame360Runtime';
@@ -41,10 +39,6 @@ type Props = {
   onSave: (template: Frame360Template) => void;
 };
 
-const CELL_W = 72;
-const CELL_H = 58;
-const PREVIEW_W = 46;
-const PREVIEW_H = 38;
 const COLOR_PRESETS = [
   '#0F172A', '#334155', '#64748B', '#FFFFFF',
   '#0066FF', '#38BDF8', '#7C3AED', '#EC4899',
@@ -146,7 +140,7 @@ function dataSourceLabel(binding: string) {
 }
 
 type EditableBlockProps = {
-  cell: Frame360DataCell;
+  cell: Frame360Block;
   active: boolean;
   locked: boolean;
   style: any;
@@ -259,13 +253,12 @@ export default function Frame360EditorModal({
   const [typeDialog, setTypeDialog] = useState(false);
   const [deepDialog, setDeepDialog] = useState(false);
   const [deepCellId, setDeepCellId] = useState<string | null>(null);
-  const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [rowsText, setRowsText] = useState('2');
   const [columnsText, setColumnsText] = useState('5');
   const [previewScale, setPreviewScale] = useState(100);
   const [editorLocked, setEditorLocked] = useState(Boolean(template?.locked));
   const [sessionSnapshot, setSessionSnapshot] = useState<Frame360Template | null>(template ? cloneTemplate(template) : null);
-  const [deepSnapshot, setDeepSnapshot] = useState<Frame360DataCell | null>(null);
+  const [deepSnapshot, setDeepSnapshot] = useState<Frame360Block | null>(null);
   const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
   const [numericDraft, setNumericDraft] = useState({ x: '', y: '', width: '', height: '' });
   const [deepPreviewPos, setDeepPreviewPos] = useState({ x: 0, y: 0 });
@@ -295,7 +288,6 @@ export default function Frame360EditorModal({
     setSelected([]);
     setDeepCellId(null);
     setDeepDialog(false);
-    setMultiSelectMode(false);
     setRowsText(String(template.grid.rows));
     setColumnsText(String(template.grid.columns));
     setPreviewScale(100);
@@ -334,7 +326,7 @@ export default function Frame360EditorModal({
 
   const replaceCell = (
     cellId: string,
-    updater: (cell: Frame360DataCell) => Frame360DataCell,
+    updater: (cell: Frame360Block) => Frame360Block,
   ) => {
     setDraft(current => {
       if (!current) return current;
@@ -348,7 +340,7 @@ export default function Frame360EditorModal({
   };
 
 
-  const getDefaultLayout = (cell: Frame360DataCell) => ({
+  const getDefaultLayout = (cell: Frame360Block) => ({
     mode: 'free' as const,
     x: cell.layout?.x ?? 0,
     y: cell.layout?.y ?? 0,
@@ -653,7 +645,7 @@ export default function Frame360EditorModal({
   };
 
   const renderSourcePicker = (
-    cell: Frame360DataCell,
+    cell: Frame360Block,
     binding: string,
     onSelect: (binding: string) => void,
   ) => (
@@ -771,53 +763,6 @@ export default function Frame360EditorModal({
     setTypeDialog(false);
   };
 
-  const mergeSelected = () => {
-    if (!draft || selected.length < 2) return;
-    const result = mergeFrame360Cells(draft.grid, selected);
-    if (result.status === 'needsDecision') {
-      Alert.alert(
-        '合併方塊',
-        '選取的方塊已有多筆內容，請選擇如何處理。系統不會自動刪除資料。',
-        [
-          {
-            text: '保留第一方塊',
-            onPress: () => {
-              const next = mergeFrame360Cells(draft.grid, selected, 'keepFirst');
-              if (next.status === 'merged') {
-                setDraft({ ...draft, grid: next.grid });
-                setSelected([next.mergedCell.id]);
-                setMultiSelectMode(false);
-              }
-            },
-          },
-          {
-            text: '保留最後一方塊',
-            onPress: () => {
-              const next = mergeFrame360Cells(draft.grid, selected, 'keepLast');
-              if (next.status === 'merged') {
-                setDraft({ ...draft, grid: next.grid });
-                setSelected([next.mergedCell.id]);
-                setMultiSelectMode(false);
-              }
-            },
-          },
-          { text: '取消', style: 'cancel' },
-        ],
-      );
-      return;
-    }
-    setDraft({ ...draft, grid: result.grid });
-    setSelected([result.mergedCell.id]);
-    setMultiSelectMode(false);
-  };
-
-  const splitSelected = () => {
-    if (!draft || selected.length !== 1) return;
-    const next = splitFrame360Cell(draft.grid, selected[0]);
-    setDraft({ ...draft, grid: next });
-    setSelected([]);
-  };
-
   const resizeWorkspace = () => {
     const rows = Number(rowsText);
     const columns = Number(columnsText);
@@ -841,7 +786,6 @@ export default function Frame360EditorModal({
     const result = appendFrame360Block(draft);
     setDraft(result.template);
     setSelected([result.block.id]);
-    setMultiSelectMode(false);
     setTypeDialog(true);
   };
 
@@ -849,7 +793,7 @@ export default function Frame360EditorModal({
     if (!draft || editorLocked) return;
     const source = draft.blocks.find(cell => cell.id === cellId);
     if (!source) return;
-    const copy = JSON.parse(JSON.stringify(source)) as Frame360DataCell;
+    const copy = JSON.parse(JSON.stringify(source)) as Frame360Block;
     copy.id = `block-${Date.now()}-copy`;
     const layout = getDefaultLayout(source);
     copy.layout = {
@@ -869,7 +813,7 @@ export default function Frame360EditorModal({
     );
     setSelected([copy.id]);
     setDeepCellId(copy.id);
-    setDeepSnapshot(JSON.parse(JSON.stringify(copy)) as Frame360DataCell);
+    setDeepSnapshot(JSON.parse(JSON.stringify(copy)) as Frame360Block);
   };
 
   const deleteBlock = (cellId: string) => {
@@ -888,28 +832,19 @@ export default function Frame360EditorModal({
     setDeepSnapshot(null);
   };
 
-  const handleCellPress = (cell: Frame360DataCell) => {
-    if (editorLocked || cell.layout?.locked) return;
-    if (multiSelectMode) {
-      setSelected(current =>
-        current.includes(cell.id)
-          ? current.filter(id => id !== cell.id)
-          : [...current, cell.id],
-      );
-      return;
-    }
-    setSelected([cell.id]);
+  const handleBlockPress = (block: Frame360Block) => {
+    if (editorLocked || block.layout?.locked) return;
+    setSelected([block.id]);
     setTypeDialog(true);
   };
 
-  const handleCellLongPress = (cell: Frame360DataCell) => {
-    if (editorLocked || cell.layout?.locked) return;
+  const handleBlockLongPress = (block: Frame360Block) => {
+    if (editorLocked || block.layout?.locked) return;
     setTypeDialog(false);
-    setSelected([cell.id]);
-    setMultiSelectMode(false);
-    setDeepCellId(cell.id);
-    setDeepSnapshot(JSON.parse(JSON.stringify(cell)) as Frame360DataCell);
-    const layout = getDefaultLayout(cell);
+    setSelected([block.id]);
+    setDeepCellId(block.id);
+    setDeepSnapshot(JSON.parse(JSON.stringify(block)) as Frame360Block);
+    const layout = getDefaultLayout(block);
     setNumericDraft({
       x: String(Math.round((layout.x / 100) * Math.max(1, draft?.canvas.width ?? 360))),
       y: String(Math.round((layout.y / 100) * Math.max(1, draft?.canvas.height ?? 500))),
@@ -922,7 +857,7 @@ export default function Frame360EditorModal({
 
   const restoreDeepSnapshot = (closeAfter = false) => {
     if (!deepSnapshot) return;
-    replaceCell(deepSnapshot.id, () => JSON.parse(JSON.stringify(deepSnapshot)) as Frame360DataCell);
+    replaceCell(deepSnapshot.id, () => JSON.parse(JSON.stringify(deepSnapshot)) as Frame360Block);
     if (closeAfter) {
       setDeepDialog(false);
       setDeepCellId(null);
@@ -961,16 +896,16 @@ export default function Frame360EditorModal({
     ]);
   };
 
-  const cellPreviewText = (cell: Frame360DataCell) => {
-    if (cell.content.kind === 'text') return cell.content.text;
-    if (cell.content.kind === 'data') return cell.content.label ?? cell.nodeLabel ?? '資料';
-    if (cell.content.kind === 'icon') return cell.content.icon;
-    if (cell.content.kind === 'chart') return cell.nodeLabel ?? '圖表';
-    if (cell.content.kind === 'reminder') return cell.content.activeLabel;
-    if (cell.content.kind === 'component') {
-      return frame360ComponentLabel(cell.content.component);
+  const blockPreviewText = (block: Frame360Block) => {
+    if (block.content.kind === 'text') return block.content.text;
+    if (block.content.kind === 'data') return block.content.label ?? block.nodeLabel ?? '資料';
+    if (block.content.kind === 'icon') return block.content.icon;
+    if (block.content.kind === 'chart') return block.nodeLabel ?? '圖表';
+    if (block.content.kind === 'reminder') return block.content.activeLabel;
+    if (block.content.kind === 'component') {
+      return frame360ComponentLabel(block.content.component);
     }
-    return frame360CellTypeLabel(cell.content.kind);
+    return frame360CellTypeLabel(block.content.kind);
   };
 
   const renderLockedGrid = (preview = false) => {
@@ -1010,8 +945,8 @@ export default function Frame360EditorModal({
               cell={cell}
               active={active}
               locked={preview || editorLocked || Boolean(cell.layout?.locked)}
-              onPress={() => handleCellPress(cell)}
-              onLongPress={() => handleCellLongPress(cell)}
+              onPress={() => handleBlockPress(cell)}
+              onLongPress={() => handleBlockLongPress(cell)}
               onDrag={(dx, dy) => dragBlock(cell.id, dx, dy)}
               onResize={(dx, dy) => resizeBlock(cell.id, dx, dy)}
               style={[
@@ -1024,7 +959,7 @@ export default function Frame360EditorModal({
                 numberOfLines={preview ? 2 : 1}
                 style={preview ? styles.previewCellText : styles.cellType}
               >
-                {preview ? cellPreviewText(cell) : frame360CellTypeLabel(cell.content.kind)}
+                {preview ? blockPreviewText(cell) : frame360CellTypeLabel(cell.content.kind)}
               </Text>
               {!preview ? (
                 <>
@@ -1033,7 +968,7 @@ export default function Frame360EditorModal({
                   </Text>
                   {cell.content.kind !== 'empty' ? (
                     <Text numberOfLines={1} style={styles.cellPreview}>
-                      {cellPreviewText(cell)}
+                      {blockPreviewText(cell)}
                     </Text>
                   ) : null}
                 </>
@@ -1285,7 +1220,7 @@ export default function Frame360EditorModal({
             <Text style={styles.dialogTitle}>360 深度功能</Text>
             <Text style={styles.dialogHint}>
               {deepCell
-                ? `${cellPreviewText(deepCell)} · ${frame360CellTypeLabel(
+                ? `${blockPreviewText(deepCell)} · ${frame360CellTypeLabel(
                     deepCell.content.kind,
                   )}`
                 : ''}
