@@ -294,22 +294,47 @@ export function Global360Provider({
       <Frame360EditorModal
         visible={Boolean(active)}
         template={active?.template ?? null}
+        frameLayout={(() => {
+          if (!active) return undefined;
+          const layout = prefs.pageLayouts?.[active.page];
+          const card =
+            active.pendingCard ??
+            layout?.cards.find(item => item.id === active.cardId);
+          if (!layout || !card) return undefined;
+          return {
+            x: card.x,
+            y: card.y,
+            w: card.w,
+            h: card.h,
+            columns: layout.columns,
+          };
+        })()}
         onClose={() => setActive(null)}
-        onSave={template => {
+        onSave={(template, frameLayout) => {
           if (!active) return;
           const blockTemplate = migrateFrame360CellsToBlocks(template);
+          const layout = prefs.pageLayouts?.[active.page];
+          if (!layout) {
+            setActive(null);
+            return;
+          }
+
           if (active.pendingCard) {
-            const layout = prefs.pageLayouts?.[active.page];
-            if (!layout) {
-              setActive(null);
-              return;
-            }
+            const pendingCard = frameLayout
+              ? {
+                  ...active.pendingCard,
+                  x: frameLayout.x,
+                  y: frameLayout.y,
+                  w: frameLayout.w,
+                  h: frameLayout.h,
+                }
+              : active.pendingCard;
             onPreferencesChange({
               pageLayouts: {
                 ...prefs.pageLayouts,
                 [active.page]: {
                   ...layout,
-                  cards: [...layout.cards, active.pendingCard],
+                  cards: [...layout.cards, pendingCard],
                 },
               },
               frame360Templates: {
@@ -318,7 +343,28 @@ export function Global360Provider({
               },
             });
           } else {
+            const cards = frameLayout
+              ? layout.cards.map(card =>
+                  card.id === active.cardId
+                    ? {
+                        ...card,
+                        x: frameLayout.x,
+                        y: frameLayout.y,
+                        w: frameLayout.w,
+                        h: frameLayout.h,
+                      }
+                    : card,
+                )
+              : layout.cards;
             onPreferencesChange({
+              ...(frameLayout
+                ? {
+                    pageLayouts: {
+                      ...prefs.pageLayouts,
+                      [active.page]: { ...layout, cards },
+                    },
+                  }
+                : {}),
               frame360Templates: {
                 ...(prefs.frame360Templates ?? {}),
                 [blockTemplate.id]: blockTemplate,
