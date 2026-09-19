@@ -666,33 +666,6 @@ export default function Frame360EditorModal({
     </>
   );
 
-  const renderColorRulePicker = (
-    label: string,
-    field: 'textColorRule' | 'textBackgroundColorRule' | 'backgroundColorRule' | 'borderColorRule',
-  ) => (
-    <>
-      <Text style={styles.deepLabel}>{label}</Text>
-      <View style={styles.choiceWrap}>
-        {([
-          ['fixed', '固定色'], ['theme', '主題色'], ['pnl', '損益色'], ['market', '行情狀態色'],
-        ] as const).map(([rule, ruleLabel]) => (
-          <Pressable
-            key={`${field}-${rule}`}
-            disabled={editorLocked}
-            onPress={() => deepCell && replaceCell(deepCell.id, cell => ({
-              ...cell,
-              style: { ...cell.style, [field]: rule },
-              content: field === 'textColorRule' && cell.content.kind === 'data'
-                ? { ...cell.content, colorRule: rule } : cell.content,
-            }))}
-            style={[styles.choice,(deepCell?.style[field] ?? 'fixed') === rule && styles.choiceActive,editorLocked && styles.disabled]}
-          >
-            <Text style={[styles.choiceText,(deepCell?.style[field] ?? 'fixed') === rule && styles.choiceTextActive]}>{ruleLabel}</Text>
-          </Pressable>
-        ))}
-      </View>
-    </>
-  );
 
   const pickImageForDeepCell = async (target: 'background' | 'content') => {
     if (!deepCell || editorLocked) return;
@@ -1729,7 +1702,9 @@ export default function Frame360EditorModal({
                 {renderColorPalette('文字背景顏色', 'textBackgroundColor')}
                 {renderInlineColorRule('textBackgroundColorRule')}
                 {renderColorPalette('方塊背景顏色', 'backgroundColor')}
+                {renderInlineColorRule('backgroundColorRule')}
                 {renderColorPalette('邊框顏色', 'borderColor')}
+                {renderInlineColorRule('borderColorRule')}
 
                 <Text style={styles.sectionTitle}>背景圖片</Text>
                 <Text style={styles.previewHint}>背景層與文字背景完全分離；背景圖可獨立選圖、縮放、位移、旋轉與調透明度。</Text>
@@ -1757,10 +1732,6 @@ export default function Frame360EditorModal({
                 {renderColorPalette('背景遮罩顏色','backgroundOverlayColor')}
                 <Text style={styles.deepLabel}>背景遮罩透明度 %</Text>
                 <DraftNumberInput editable={!editorLocked} value={deepCell.style.backgroundOverlayOpacity??0} min={0} max={100} onCommit={backgroundOverlayOpacity=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundOverlayOpacity}}))} style={styles.deepInput}/>
-                <Text style={styles.sectionTitle}>顏色規則（互相獨立）</Text>
-                <Text style={styles.previewHint}>文字、文字背景、方塊背景與邊框各自設定，不再綁在同一個動態規則。</Text>
-                {renderColorRulePicker('方塊背景規則','backgroundColorRule')}
-                {renderColorRulePicker('邊框規則','borderColorRule')}
 
                 {deepCell.content.kind === 'text' ? (
                   <>
