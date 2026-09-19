@@ -606,7 +606,7 @@ export default function Frame360EditorModal({
               <Text style={styles.eyebrow}>360 編輯器</Text>
               <Text style={styles.title}>{draft.name}</Text>
               <Text style={styles.subtitle}>
-                工作區 {draft.grid.columns} 欄 × {draft.grid.rows} 列 · ${draft.grid.dataCells.length} 個方塊 · 已選 {selected.length}
+                工作區 {draft.grid.columns} 欄 × {draft.grid.rows} 列 · {draft.grid.dataCells.length} 個方塊 · 已選 {selected.length}
               </Text>
             </View>
             <Pressable onPress={onClose} style={styles.closeButton}>
