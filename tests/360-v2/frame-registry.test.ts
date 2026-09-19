@@ -7,7 +7,7 @@ import {
 } from '../../src/v3/frame360Registry';
 
 describe('360 registry', () => {
-  it('includes reminder and component as first-class cell types', () => {
+  it('includes reminder and component as first-class Block types', () => {
     expect(FRAME360_CELL_TYPES.some(item => item.kind === 'reminder')).toBe(true);
     expect(FRAME360_CELL_TYPES.some(item => item.kind === 'component')).toBe(true);
   });
@@ -21,6 +21,6 @@ describe('360 registry', () => {
     for (const text of visible) {
       expect(/[A-Za-z]/.test(text)).toBe(false);
     }
-    expect(frame360CellTypeLabel('reminder')).toBe('提醒格');
+    expect(frame360CellTypeLabel('reminder')).toBe('提醒方塊');
   });
 });
