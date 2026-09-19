@@ -380,6 +380,7 @@ export function LedgerScreen({
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
+      <PageFrame prefs={common.prefs} page="ledger" cardId="ledger-header">
       <View style={styles.headerRow}>
         <View style={styles.headerText}>
           <Text style={styles.eyebrow}>SMART LEDGER</Text>
@@ -406,6 +407,7 @@ export function LedgerScreen({
           <Text style={styles.historyShortcutText}>記帳紀錄</Text>
         </Pressable>
       </View>
+      </PageFrame>
 
       <PageFrameStack prefs={common.prefs} page="ledger">
       <PageFrame prefs={common.prefs} page="ledger" cardId="ledger-summary">
