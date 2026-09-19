@@ -190,13 +190,32 @@ export type Frame360DataCell = {
  */
 export type Frame360Block = Frame360DataCell;
 
+export type Frame360Canvas = {
+  width: number;
+  height: number;
+  showGrid: boolean;
+  gridRows: number;
+  gridColumns: number;
+  showGuides: boolean;
+  showCenterGuides: boolean;
+  showEdgeGuides: boolean;
+  showRulers: boolean;
+  snapEnabled: boolean;
+  snapToGrid: boolean;
+  snapToGuides: boolean;
+  snapToBlocks: boolean;
+  snapThreshold: number;
+  showSafeArea: boolean;
+  showCoordinates: boolean;
+};
+
 export type Frame360Grid = {
-  /** Workspace guide rows. They no longer imply content cells. */
+  /** @deprecated V5.0.8+: guide/migration compatibility only. Never use as content storage. */
   rows: number;
-  /** Workspace guide columns. They no longer imply content cells. */
+  /** @deprecated V5.0.8+: guide/migration compatibility only. Never use as content storage. */
   columns: number;
   baseCells: Frame360BaseCell[];
-  /** Visual Blocks only. Empty previous storage cells are removed by migration. */
+  /** @deprecated Legacy Cell payload used only while migrating persisted layouts. */
   dataCells: Frame360Block[];
 };
 
@@ -206,6 +225,11 @@ export type Frame360Template = {
   templateKey: string;
   name: string;
   version: number;
+  /** B layer: the frame itself is the Canvas. */
+  canvas: Frame360Canvas;
+  /** C layer: canonical visual objects. Grid/Cell is never the parent of a Block. */
+  blocks: Frame360Block[];
+  /** Legacy guide/migration payload. Runtime/editor must not use this as content storage. */
   grid: Frame360Grid;
   updatedAt: number;
   locked?: boolean;
@@ -240,6 +264,7 @@ export const DEFAULT_FRAME360_STYLE: Frame360CellStyle = {
 
 const makeCellId = (row: number, column: number) => `r${row}c${column}`;
 
+/** Legacy-only cell grid factory. New frames use createFrame360GuideGrid instead. */
 export function createFrame360Grid(rows: number, columns: number): Frame360Grid {
   if (!Number.isInteger(rows) || !Number.isInteger(columns) || rows < 1 || columns < 1) {
     throw new Error('格線列數與欄數必須為正整數');
@@ -268,6 +293,16 @@ export function createFrame360Grid(rows: number, columns: number): Frame360Grid 
   }
 
   return { rows, columns, baseCells, dataCells };
+}
+
+function createFrame360GuideGrid(rows: number, columns: number): Frame360Grid {
+  if (!Number.isInteger(rows) || !Number.isInteger(columns) || rows < 1 || columns < 1) {
+    throw new Error('輔助格線列數與欄數必須為正整數');
+  }
+  if (rows > 50 || columns > 50) {
+    throw new Error('單一框架輔助格線上限為 50 × 50');
+  }
+  return { rows, columns, baseCells: createBaseCells(rows, columns), dataCells: [] };
 }
 
 function createBaseCells(rows: number, columns: number): Frame360BaseCell[] {
@@ -322,9 +357,10 @@ function storedCellToFreeLayout(
 export function migrateFrame360CellsToBlocks(
   template: Frame360Template,
 ): Frame360Template {
-  const rows = Math.max(1, template.grid.rows);
-  const columns = Math.max(1, template.grid.columns);
-  const blocks = template.grid.dataCells
+  const rows = Math.max(1, template.canvas?.gridRows ?? template.grid.rows);
+  const columns = Math.max(1, template.canvas?.gridColumns ?? template.grid.columns);
+  const sourceBlocks = template.blocks?.length ? template.blocks : template.grid.dataCells;
+  const blocks = sourceBlocks
     .filter(cell => cell.content.kind !== 'empty' || Boolean(cell.targetNodeId))
     .map(cell => ({
       ...cell,
@@ -333,12 +369,26 @@ export function migrateFrame360CellsToBlocks(
 
   return {
     ...template,
-    grid: {
-      rows,
-      columns,
-      baseCells: createBaseCells(rows, columns),
-      dataCells: blocks,
+    canvas: {
+      width: template.canvas?.width ?? 360,
+      height: template.canvas?.height ?? 500,
+      showGrid: template.canvas?.showGrid ?? true,
+      gridRows: rows,
+      gridColumns: columns,
+      showGuides: template.canvas?.showGuides ?? true,
+      showCenterGuides: template.canvas?.showCenterGuides ?? true,
+      showEdgeGuides: template.canvas?.showEdgeGuides ?? true,
+      showRulers: template.canvas?.showRulers ?? false,
+      snapEnabled: template.canvas?.snapEnabled ?? true,
+      snapToGrid: template.canvas?.snapToGrid ?? true,
+      snapToGuides: template.canvas?.snapToGuides ?? true,
+      snapToBlocks: template.canvas?.snapToBlocks ?? true,
+      snapThreshold: template.canvas?.snapThreshold ?? 6,
+      showSafeArea: template.canvas?.showSafeArea ?? false,
+      showCoordinates: template.canvas?.showCoordinates ?? false,
     },
+    blocks,
+    grid: createFrame360GuideGrid(rows, columns),
   };
 }
 
@@ -360,12 +410,12 @@ export function resizeFrame360Workspace(
   const migrated = migrateFrame360CellsToBlocks(template);
   return {
     ...migrated,
-    grid: {
-      rows,
-      columns,
-      baseCells: createBaseCells(rows, columns),
-      dataCells: migrated.grid.dataCells,
+    canvas: {
+      ...migrated.canvas,
+      gridRows: rows,
+      gridColumns: columns,
     },
+    grid: createFrame360GuideGrid(rows, columns),
   };
 }
 
@@ -374,9 +424,9 @@ export function appendFrame360Block(
   content: Frame360CellContent = { kind: 'text', text: '新方塊' },
 ): { template: Frame360Template; block: Frame360Block } {
   const migrated = migrateFrame360CellsToBlocks(template);
-  const index = migrated.grid.dataCells.length;
-  const width = Math.min(32, Math.max(18, 100 / Math.max(1, migrated.grid.columns)));
-  const height = Math.min(28, Math.max(12, 100 / Math.max(1, migrated.grid.rows)));
+  const index = migrated.blocks.length;
+  const width = Math.min(32, Math.max(18, 100 / Math.max(1, migrated.canvas.gridColumns)));
+  const height = Math.min(28, Math.max(12, 100 / Math.max(1, migrated.canvas.gridRows)));
   const step = 4;
   const x = Math.min(Math.max(0, 100 - width), (index * step) % Math.max(step, 100 - width));
   const y = Math.min(Math.max(0, 100 - height), (index * step) % Math.max(step, 100 - height));
@@ -409,10 +459,7 @@ export function appendFrame360Block(
   return {
     template: {
       ...migrated,
-      grid: {
-        ...migrated.grid,
-        dataCells: [...migrated.grid.dataCells, block],
-      },
+      blocks: [...migrated.blocks, block],
     },
     block,
   };
@@ -433,7 +480,26 @@ export function createFrame360Template(input: {
     templateKey: input.templateKey,
     name: input.name,
     version: 1,
-    grid: createFrame360Grid(input.rows, input.columns),
+    canvas: {
+      width: 360,
+      height: 500,
+      showGrid: true,
+      gridRows: input.rows,
+      gridColumns: input.columns,
+      showGuides: true,
+      showCenterGuides: true,
+      showEdgeGuides: true,
+      showRulers: false,
+      snapEnabled: true,
+      snapToGrid: true,
+      snapToGuides: true,
+      snapToBlocks: true,
+      snapThreshold: 6,
+      showSafeArea: false,
+      showCoordinates: false,
+    },
+    blocks: [],
+    grid: createFrame360GuideGrid(input.rows, input.columns),
     updatedAt: input.updatedAt ?? Date.now(),
   };
 }
