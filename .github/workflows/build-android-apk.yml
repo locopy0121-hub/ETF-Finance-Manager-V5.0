@@ -76,7 +76,7 @@ jobs:
           grep -F 'versionCode 50005' android/app/build.gradle
           grep -F 'versionName "5.0.5"' android/app/build.gradle
           grep -F '<string name="app_name">ETF財務管家 V5.0.5 NATIVE</string>' android/app/src/main/res/values/strings.xml
-          grep -F '<string name="expo_runtime_version">5.0.4</string>' android/app/src/main/res/values/strings.xml
+          grep -F '<string name="expo_runtime_version">5.0.5</string>' android/app/src/main/res/values/strings.xml
 
       - name: Verify canonical Huanan finance core wiring
         shell: bash
