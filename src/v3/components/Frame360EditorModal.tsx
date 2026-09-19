@@ -35,6 +35,7 @@ import {
 type Props = {
   visible: boolean;
   template: Frame360Template | null;
+  previewData?: Record<string, unknown>;
   onClose: () => void;
   onSave: (template: Frame360Template) => void;
 };
@@ -257,6 +258,7 @@ const ALIGNMENTS: Array<[Frame360Alignment, string]> = [
 export default function Frame360EditorModal({
   visible,
   template,
+  previewData: externalPreviewData,
   onClose,
   onSave,
 }: Props) {
@@ -323,17 +325,18 @@ export default function Frame360EditorModal({
   );
 
   const previewData = useMemo(() => {
+    if (externalPreviewData) return externalPreviewData;
     if (!draft) return {};
     return Object.fromEntries(
       draft.blocks
-        .filter(cell => cell.content.kind === 'data' && cell.previewValue !== undefined)
-        .map(cell => {
-          const content = cell.content.kind === 'data' ? cell.content : null;
-          return [content?.binding ?? '', cell.previewValue];
+        .filter(block => block.content.kind === 'data' && block.previewValue !== undefined)
+        .map(block => {
+          const content = block.content.kind === 'data' ? block.content : null;
+          return [content?.binding ?? '', block.previewValue];
         })
         .filter(([key]) => Boolean(key)),
     );
-  }, [draft]);
+  }, [draft, externalPreviewData]);
 
   // Preview never invents sample values. It reuses values captured from the edited location.
   const previewToday = new Date().toISOString().slice(0, 10);
