@@ -1,4 +1,4 @@
-# ETF財務管家 V5.0.2 NATIVE
+# ETF財務管家 V5.0.4 NATIVE
 
 Global Editor 2.1 + Floating Monitor Native 2.0 + Settings Layout 2.1 + Chart Engine 2.1 + AI Assistant 3.0 + App Icon Center + Native UI Foundation。
 
@@ -18,6 +18,6 @@ powershell -ExecutionPolicy Bypass -File .\BUILD_V3.6.0_APK.ps1
 ## 重要
 V3.6.0 是新的 Native baseline (`runtimeVersion 3.6.0`)。V3.5.x APK 無法用 OTA 取得本版 Kotlin Overlay、排程 Receiver、App Icon activity-alias 或 Navigation Bar Native 控制能力。
 
-## V5.0.2 Global 360 Complete
+## V5.0.4 Global 360 Block Workspace
 
-V5.0.2 Global 360 Complete：全 App 可配置 UI 納入 360、固定儲存格座標、深度屬性、即時正式 Renderer 預覽、同類框架同步、Safe Area 與零舊版全局編輯入口。
+V5.0.4 Global 360 Block Workspace：全 App 可配置 UI 改為獨立 Block；格線只負責定位，支援目前頁面新增框架、框架內新增方塊、自由移動/縮放/鎖定/微調、即時 Renderer 預覽與同類框架同步。
