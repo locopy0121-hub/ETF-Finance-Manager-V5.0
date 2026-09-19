@@ -59,9 +59,7 @@ function buildDefaultTemplate(
   nodes: Global360NodeDescriptor[],
   displayName?: string,
 ): Frame360Template {
-  const normalized = nodes.length
-    ? nodes
-    : [{ id: 'content', label: '內容', kind: 'container' as const }];
+  const normalized = nodes.filter(node => node.id !== 'frame:root');
   const columns = Math.min(4, Math.max(1, normalized.length));
   const rows = Math.max(1, Math.ceil(normalized.length / columns));
   const template = createFrame360Template({
@@ -103,7 +101,6 @@ function buildDefaultTemplate(
           nudgeStep: 1,
         },
       };
-      const node = normalized[index];
       const content =
         node.kind === 'data' || node.binding
           ? {
