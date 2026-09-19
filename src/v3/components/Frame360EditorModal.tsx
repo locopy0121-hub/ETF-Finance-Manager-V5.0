@@ -639,6 +639,33 @@ export default function Frame360EditorModal({
     </>
   );
 
+  const renderInlineColorRule = (
+    field: 'textColorRule' | 'textBackgroundColorRule' | 'backgroundColorRule' | 'borderColorRule',
+  ) => (
+    <>
+      <Text style={styles.previewHint}>顏色模式</Text>
+      <View style={styles.choiceWrap}>
+        {([
+          ['fixed', '固定色'], ['theme', '主題色'], ['pnl', '損益色'], ['market', '行情狀態色'],
+        ] as const).map(([rule, ruleLabel]) => (
+          <Pressable
+            key={`${field}-inline-${rule}`}
+            disabled={editorLocked}
+            onPress={() => deepCell && replaceCell(deepCell.id, cell => ({
+              ...cell,
+              style: { ...cell.style, [field]: rule },
+              content: field === 'textColorRule' && cell.content.kind === 'data'
+                ? { ...cell.content, colorRule: rule } : cell.content,
+            }))}
+            style={[styles.choice,(deepCell?.style[field] ?? 'fixed') === rule && styles.choiceActive,editorLocked && styles.disabled]}
+          >
+            <Text style={[styles.choiceText,(deepCell?.style[field] ?? 'fixed') === rule && styles.choiceTextActive]}>{ruleLabel}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </>
+  );
+
   const renderColorRulePicker = (
     label: string,
     field: 'textColorRule' | 'textBackgroundColorRule' | 'backgroundColorRule' | 'borderColorRule',
@@ -1698,6 +1725,7 @@ export default function Frame360EditorModal({
                 <DraftNumberInput value={deepCell.style.elevation ?? 0} min={0} max={24} editable={!editorLocked} onCommit={elevation => replaceCell(deepCell.id, cell => ({ ...cell, style: { ...cell.style, elevation } }))} style={styles.deepInput} />
 
                 {renderColorPalette('文字顏色', 'textColor')}
+                {renderInlineColorRule('textColorRule')}
                 {renderColorPalette('文字背景顏色', 'textBackgroundColor')}
                 {renderColorPalette('方塊背景顏色', 'backgroundColor')}
                 {renderColorPalette('邊框顏色', 'borderColor')}
@@ -1730,7 +1758,6 @@ export default function Frame360EditorModal({
                 <DraftNumberInput editable={!editorLocked} value={deepCell.style.backgroundOverlayOpacity??0} min={0} max={100} onCommit={backgroundOverlayOpacity=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundOverlayOpacity}}))} style={styles.deepInput}/>
                 <Text style={styles.sectionTitle}>顏色規則（互相獨立）</Text>
                 <Text style={styles.previewHint}>文字、文字背景、方塊背景與邊框各自設定，不再綁在同一個動態規則。</Text>
-                {renderColorRulePicker('文字顏色規則','textColorRule')}
                 {renderColorRulePicker('文字背景規則','textBackgroundColorRule')}
                 {renderColorRulePicker('方塊背景規則','backgroundColorRule')}
                 {renderColorRulePicker('邊框規則','borderColorRule')}
