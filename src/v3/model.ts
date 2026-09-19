@@ -180,6 +180,7 @@ export type V3Preferences = {
   accentColor:string;
   positiveColor:string;
   negativeColor:string;
+  neutralColor?:string;
   followThemeProfitLossColors:boolean;
   market:MarketPreferences;
   ai:AiPreferences;
@@ -295,6 +296,7 @@ export const defaultV3Preferences: V3Preferences = {
   accentColor:'#0066FF',
   positiveColor:'#EF4444',
   negativeColor:'#10B981',
+  neutralColor:'#CA8A04',
   followThemeProfitLossColors:true,
   market:{autoRefresh:true,refreshSeconds:5,onlyTradingHours:true,refreshOnForeground:true,useCloseSnapshotAfterHours:true,scheduleEnabled:true,stopAll:false,live:{enabled:true,start:'08:30',end:'14:00',refreshSeconds:1},afterHours:{enabled:true,start:'14:00',end:'08:30',refreshSeconds:600},source:'TWSE'},
   ai:{enabled:true,showHeaderButton:true,confirmWrites:true,localParser:true,fontScale:100},
