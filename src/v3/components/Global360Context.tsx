@@ -72,9 +72,37 @@ function buildDefaultTemplate(
     rows,
     columns,
   });
-  template.grid.dataCells = template.grid.dataCells
-    .slice(0, normalized.length)
-    .map((cell, index) => {
+  template.blocks = normalized.map((node, index) => {
+      const columns = Math.max(1, template.canvas.gridColumns);
+      const rows = Math.max(1, Math.ceil(normalized.length / columns));
+      const column = index % columns;
+      const row = Math.floor(index / columns);
+      const width = Math.max(16, 100 / columns - 2);
+      const height = Math.max(12, 100 / Math.max(1, rows) - 2);
+      const cell = {
+        id: `block-${node.id}`,
+        rowStart: 1,
+        columnStart: 1,
+        rowSpan: 1,
+        columnSpan: 1,
+        baseCellIds: [],
+        content: { kind: 'empty' as const },
+        style: { alignment: 'center' as const },
+        layout: {
+          mode: 'free' as const,
+          x: column * (100 / columns) + 1,
+          y: row * (100 / Math.max(1, rows)) + 1,
+          width,
+          height,
+          minWidth: 4,
+          minHeight: 4,
+          maxWidth: 100,
+          maxHeight: 100,
+          locked: false,
+          zIndex: index,
+          nudgeStep: 1,
+        },
+      };
       const node = normalized[index];
       const content =
         node.kind === 'data' || node.binding
