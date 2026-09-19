@@ -13,6 +13,7 @@ export type Global360NodeDescriptor = {
   id: string;
   label: string;
   binding?: string;
+  previewValue?: unknown;
   kind?: 'text' | 'data' | 'component' | 'container';
 };
 
@@ -84,6 +85,7 @@ function buildDefaultTemplate(
         ...cell,
         targetNodeId: node.id,
         nodeLabel: node.label,
+        previewValue: node.previewValue,
         content,
         sourceLocked: true,
       };
