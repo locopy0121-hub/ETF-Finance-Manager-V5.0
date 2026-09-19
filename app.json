@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "ETF財務管家 V5.0.6",
+    "name": "ETF財務管家 V5.0.7",
     "slug": "etf-pilot-twse-live",
-    "version": "5.0.6",
+    "version": "5.0.7",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "runtimeVersion": "5.0.6",
+    "runtimeVersion": "5.0.7",
     "android": {
       "package": "com.etfpilot.twselive",
-      "versionCode": 50006,
+      "versionCode": 50007,
       "adaptiveIcon": {
         "foregroundImage": "./assets/v3-icon.png",
         "backgroundColor": "#0B111E"
@@ -16,7 +16,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.etfpilot.twselive",
-      "buildNumber": "53"
+      "buildNumber": "54"
     },
     "extra": {
       "eas": {
