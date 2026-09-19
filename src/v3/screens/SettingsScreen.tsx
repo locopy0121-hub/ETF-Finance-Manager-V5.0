@@ -23,9 +23,6 @@ import { normalizeGridMonitor } from '../monitoring';
 import { PageFrame } from '../pageRuntime';
 import FontScaleScope from '../components/FontScaleScope';
 import ColorPalettePicker from '../../components/ColorPalettePicker';
-import Frame360EditorModal from '../components/Frame360EditorModal';
-import { createFrame360Template, type Frame360Template } from '../frame360';
-import { createPortfolioHoldingFrame360Template } from '../frame360Defaults';
 import {
   EFFECT_KINDS,
   effectDefaults,
