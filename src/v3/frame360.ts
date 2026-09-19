@@ -58,6 +58,9 @@ export type Frame360ComponentKind =
   | 'status';
 
 export type Frame360ColorRule = 'auto' | 'fixed' | 'theme' | 'pnl' | 'market';
+export type Frame360ImageFit = 'contain' | 'cover' | 'stretch' | 'repeat' | 'original';
+export type Frame360ChartRange = '1d' | '1w' | '1m' | '3m' | '1y' | 'all';
+export type Frame360ChartInterval = 'intraday' | 'daily' | 'monthly';
 
 export type Frame360BlockLayout = {
   mode?: 'grid' | 'free';
@@ -73,6 +76,10 @@ export type Frame360BlockLayout = {
   locked?: boolean;
   zIndex?: number;
   nudgeStep?: number;
+  /** Editor uses px; persisted values remain relative to the parent frame for responsive playback. */
+  editorUnit?: 'px';
+  anchorX?: 'left' | 'center' | 'right';
+  anchorY?: 'top' | 'center' | 'bottom';
 };
 
 export type Frame360CellStyle = {
@@ -99,6 +106,15 @@ export type Frame360CellStyle = {
   elevation?: number;
   effect?: Frame360Effect;
   visible?: boolean;
+  /** Background image belongs to the block/frame background layer, never to text background. */
+  backgroundImageUri?: string;
+  backgroundImageFit?: Frame360ImageFit;
+  backgroundImageOpacity?: number;
+  backgroundImageScale?: number;
+  backgroundImageX?: number;
+  backgroundImageY?: number;
+  backgroundOverlayColor?: string;
+  backgroundOverlayOpacity?: number;
 };
 
 export type Frame360CellContent =
@@ -112,9 +128,27 @@ export type Frame360CellContent =
       format?: 'text' | 'number' | 'currency' | 'percent';
       colorRule?: Frame360ColorRule;
     }
-  | { kind: 'image'; uri?: string; fit?: 'contain' | 'cover' }
+  | {
+      kind: 'image';
+      uri?: string;
+      fit?: Frame360ImageFit;
+      opacity?: number;
+      scale?: number;
+      x?: number;
+      y?: number;
+      rotation?: number;
+    }
   | { kind: 'icon'; icon: string }
-  | { kind: 'chart'; chartType: string; binding: string }
+  | {
+      kind: 'chart';
+      chartType: string;
+      binding: string;
+      xBinding?: string;
+      yBindings?: string[];
+      range?: Frame360ChartRange;
+      interval?: Frame360ChartInterval;
+      contextKey?: string;
+    }
   | {
       kind: 'reminder';
       source: Frame360ReminderSource;
@@ -134,6 +168,8 @@ export type Frame360DataCell = {
   id: string;
   targetNodeId?: string;
   nodeLabel?: string;
+  /** Native bindings are protected until the user explicitly unlocks the source. */
+  sourceLocked?: boolean;
   rowStart: number;
   columnStart: number;
   rowSpan: number;
