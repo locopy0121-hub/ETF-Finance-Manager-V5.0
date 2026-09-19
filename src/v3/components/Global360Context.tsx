@@ -4,6 +4,7 @@ import type { PageFieldKey } from '../pageRegistry';
 import type { V3Preferences } from '../model';
 import {
   createFrame360Template,
+  migrateFrame360CellsToBlocks,
   type Frame360Template,
 } from '../frame360';
 import Frame360EditorModal from './Frame360EditorModal';
@@ -44,16 +45,17 @@ function buildDefaultTemplate(
     rows,
     columns,
   });
-  template.grid.dataCells = template.grid.dataCells.map((cell, index) => {
-    const node = normalized[index];
-    if (!node) return cell;
-    const content =
-      node.kind === 'data' || node.binding
-        ? { kind: 'data' as const, binding: node.binding ?? node.id, label: node.label, colorRule: 'auto' as const }
-        : { kind: 'text' as const, text: node.label };
-    return { ...cell, targetNodeId: node.id, nodeLabel: node.label, content };
-  });
-  return template;
+  template.grid.dataCells = template.grid.dataCells
+    .slice(0, normalized.length)
+    .map((cell, index) => {
+      const node = normalized[index];
+      const content =
+        node.kind === 'data' || node.binding
+          ? { kind: 'data' as const, binding: node.binding ?? node.id, label: node.label, colorRule: 'auto' as const }
+          : { kind: 'text' as const, text: node.label };
+      return { ...cell, targetNodeId: node.id, nodeLabel: node.label, content };
+    });
+  return migrateFrame360CellsToBlocks(template);
 }
 
 export function Global360Provider({
@@ -84,7 +86,11 @@ export function Global360Provider({
     ) => {
       if (!enabled) return;
       const existing = resolveTemplate(page, cardId);
-      setActive(existing ? JSON.parse(JSON.stringify(existing)) : buildDefaultTemplate(page, cardId, nodes, displayName));
+      setActive(
+        existing
+          ? migrateFrame360CellsToBlocks(JSON.parse(JSON.stringify(existing)))
+          : buildDefaultTemplate(page, cardId, nodes, displayName),
+      );
     },
     [enabled, resolveTemplate],
   );
@@ -102,10 +108,11 @@ export function Global360Provider({
         template={active}
         onClose={() => setActive(null)}
         onSave={template => {
+          const blockTemplate = migrateFrame360CellsToBlocks(template);
           onPreferencesChange({
             frame360Templates: {
               ...(prefs.frame360Templates ?? {}),
-              [template.id]: template,
+              [blockTemplate.id]: blockTemplate,
             },
           });
           setActive(null);
