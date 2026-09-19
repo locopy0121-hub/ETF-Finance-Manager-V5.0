@@ -247,12 +247,21 @@ function legacyCellToFreeLayout(
   columns: number,
 ): Frame360BlockLayout {
   const existing = cell.layout ?? {};
-  const width = existing.width ?? (cell.columnSpan / Math.max(1, columns)) * 100;
-  const height = existing.height ?? (cell.rowSpan / Math.max(1, rows)) * 100;
+  const legacy = existing.mode !== 'free';
+  const baseX = ((cell.columnStart - 1) / Math.max(1, columns)) * 100;
+  const baseY = ((cell.rowStart - 1) / Math.max(1, rows)) * 100;
+  const baseWidth = (cell.columnSpan / Math.max(1, columns)) * 100;
+  const baseHeight = (cell.rowSpan / Math.max(1, rows)) * 100;
+  // A small inset makes migrated Blocks visibly independent instead of
+  // reproducing the old edge-to-edge spreadsheet look.
+  const gapX = legacy ? Math.min(0.8, baseWidth * 0.08) : 0;
+  const gapY = legacy ? Math.min(0.8, baseHeight * 0.08) : 0;
+  const width = existing.width ?? Math.max(4, baseWidth - gapX * 2);
+  const height = existing.height ?? Math.max(4, baseHeight - gapY * 2);
   return {
     mode: 'free',
-    x: existing.x ?? ((cell.columnStart - 1) / Math.max(1, columns)) * 100,
-    y: existing.y ?? ((cell.rowStart - 1) / Math.max(1, rows)) * 100,
+    x: existing.x ?? baseX + gapX,
+    y: existing.y ?? baseY + gapY,
     width,
     height,
     minWidth: existing.minWidth ?? 4,
