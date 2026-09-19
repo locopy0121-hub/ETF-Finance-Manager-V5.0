@@ -18,8 +18,7 @@ import {
   type Frame360ReminderContext,
 } from '../frame360Reminder';
 import { frame360ComponentLabel } from '../frame360Registry';
-
-type ProfitLossColors = { positive: string; negative: string; neutral: string };
+import { resolveFrame360RuleColor, type ProfitLossColors } from '../frame360Color';
 
 type Props = {
   template: Frame360Template;
@@ -104,34 +103,6 @@ function formatDataValue(
   return numeric.toLocaleString('zh-TW', {
     maximumFractionDigits: format === 'currency' ? 0 : 4,
   });
-}
-
-export function resolveFrame360RuleColor(
-  rule: 'auto' | 'fixed' | 'theme' | 'pnl' | 'market' | undefined,
-  value: unknown,
-  fixed: string | undefined,
-  surface: 'text' | 'background' | 'border' = 'text',
-  profitLossColors: ProfitLossColors = {
-    positive: '#EF4444',
-    negative: '#10B981',
-    neutral: '#CA8A04',
-  },
-) {
-  if (!rule || rule === 'fixed' || rule === 'auto') return fixed;
-  if (rule === 'theme') return fixed ?? (surface === 'background' ? '#EFF6FF' : '#0066FF');
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return fixed;
-  if (surface === 'background') {
-    const hex = numeric > 0
-      ? profitLossColors.positive
-      : numeric < 0
-        ? profitLossColors.negative
-        : profitLossColors.neutral;
-    return hex + '22';
-  }
-  if (numeric > 0) return profitLossColors.positive;
-  if (numeric < 0) return profitLossColors.negative;
-  return profitLossColors.neutral;
 }
 
 function resolveDataValue(cell: Frame360DataCell, data: Props['data']) {
