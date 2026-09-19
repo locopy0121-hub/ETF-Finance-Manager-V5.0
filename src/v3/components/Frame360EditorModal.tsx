@@ -195,7 +195,9 @@ function EditableBlock({
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => !locked,
+        onStartShouldSetPanResponderCapture: () => !locked,
         onMoveShouldSetPanResponder: () => !locked,
+        onMoveShouldSetPanResponderCapture: () => !locked,
         onPanResponderGrant: () => {
           lastResize.current = { x: 0, y: 0 };
         },
@@ -206,6 +208,8 @@ function EditableBlock({
           lastResize.current = { x: gesture.dx, y: gesture.dy };
           onResize(dx, dy);
         },
+        onPanResponderTerminationRequest: () => false,
+        onShouldBlockNativeResponder: () => true,
       }),
     [locked, onResize],
   );
