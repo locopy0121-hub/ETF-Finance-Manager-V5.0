@@ -144,11 +144,21 @@ export type Frame360DataCell = {
   layout?: Frame360BlockLayout;
 };
 
+/**
+ * V5.0.4: a visual item inside a 360 frame is a Block.
+ * Frame360DataCell remains as a storage-compatible type name so existing
+ * persisted layouts can be migrated without data loss.
+ */
+export type Frame360Block = Frame360DataCell;
+
 export type Frame360Grid = {
+  /** Workspace guide rows. They no longer imply content cells. */
   rows: number;
+  /** Workspace guide columns. They no longer imply content cells. */
   columns: number;
   baseCells: Frame360BaseCell[];
-  dataCells: Frame360DataCell[];
+  /** Visual Blocks only. Empty legacy storage cells are removed by migration. */
+  dataCells: Frame360Block[];
 };
 
 export type Frame360Template = {
@@ -219,6 +229,145 @@ export function createFrame360Grid(rows: number, columns: number): Frame360Grid 
   }
 
   return { rows, columns, baseCells, dataCells };
+}
+
+function createBaseCells(rows: number, columns: number): Frame360BaseCell[] {
+  const baseCells: Frame360BaseCell[] = [];
+  for (let row = 1; row <= rows; row += 1) {
+    for (let column = 1; column <= columns; column += 1) {
+      baseCells.push({ id: makeCellId(row, column), row, column });
+    }
+  }
+  return baseCells;
+}
+
+function legacyCellToFreeLayout(
+  cell: Frame360DataCell,
+  rows: number,
+  columns: number,
+): Frame360BlockLayout {
+  const existing = cell.layout ?? {};
+  const width = existing.width ?? (cell.columnSpan / Math.max(1, columns)) * 100;
+  const height = existing.height ?? (cell.rowSpan / Math.max(1, rows)) * 100;
+  return {
+    mode: 'free',
+    x: existing.x ?? ((cell.columnStart - 1) / Math.max(1, columns)) * 100,
+    y: existing.y ?? ((cell.rowStart - 1) / Math.max(1, rows)) * 100,
+    width,
+    height,
+    minWidth: existing.minWidth ?? 4,
+    minHeight: existing.minHeight ?? 4,
+    maxWidth: existing.maxWidth ?? 100,
+    maxHeight: existing.maxHeight ?? 100,
+    lockAspectRatio: existing.lockAspectRatio ?? false,
+    locked: existing.locked ?? false,
+    zIndex: existing.zIndex ?? 0,
+    nudgeStep: existing.nudgeStep ?? 1,
+  };
+}
+
+/**
+ * Converts legacy 1-1 / 1-2 storage cells into independent free Blocks.
+ * Empty cells are intentionally discarded; the grid remains only as a guide.
+ * This function is idempotent and safe to run whenever a frame is opened.
+ */
+export function migrateFrame360CellsToBlocks(
+  template: Frame360Template,
+): Frame360Template {
+  const rows = Math.max(1, template.grid.rows);
+  const columns = Math.max(1, template.grid.columns);
+  const blocks = template.grid.dataCells
+    .filter(cell => cell.content.kind !== 'empty' || Boolean(cell.targetNodeId))
+    .map(cell => ({
+      ...cell,
+      layout: legacyCellToFreeLayout(cell, rows, columns),
+    }));
+
+  return {
+    ...template,
+    grid: {
+      rows,
+      columns,
+      baseCells: createBaseCells(rows, columns),
+      dataCells: blocks,
+    },
+  };
+}
+
+/**
+ * Changes only the workspace guide dimensions. Existing Blocks stay in the
+ * active frame and keep their free-layout positions instead of being replaced.
+ */
+export function resizeFrame360Workspace(
+  template: Frame360Template,
+  rows: number,
+  columns: number,
+): Frame360Template {
+  if (!Number.isInteger(rows) || !Number.isInteger(columns) || rows < 1 || columns < 1) {
+    throw new Error('工作區列數與欄數必須為正整數');
+  }
+  if (rows > 50 || columns > 50) {
+    throw new Error('單一框架工作區上限為 50 × 50');
+  }
+  const migrated = migrateFrame360CellsToBlocks(template);
+  return {
+    ...migrated,
+    grid: {
+      rows,
+      columns,
+      baseCells: createBaseCells(rows, columns),
+      dataCells: migrated.grid.dataCells,
+    },
+  };
+}
+
+export function appendFrame360Block(
+  template: Frame360Template,
+  content: Frame360CellContent = { kind: 'text', text: '新方塊' },
+): { template: Frame360Template; block: Frame360Block } {
+  const migrated = migrateFrame360CellsToBlocks(template);
+  const index = migrated.grid.dataCells.length;
+  const width = Math.min(32, Math.max(18, 100 / Math.max(1, migrated.grid.columns)));
+  const height = Math.min(28, Math.max(12, 100 / Math.max(1, migrated.grid.rows)));
+  const step = 4;
+  const x = Math.min(Math.max(0, 100 - width), (index * step) % Math.max(step, 100 - width));
+  const y = Math.min(Math.max(0, 100 - height), (index * step) % Math.max(step, 100 - height));
+  const id = `block-${Date.now()}-${index + 1}`;
+  const block: Frame360Block = {
+    id,
+    rowStart: 1,
+    columnStart: 1,
+    rowSpan: 1,
+    columnSpan: 1,
+    baseCellIds: [],
+    content,
+    style: { ...DEFAULT_FRAME360_STYLE },
+    layout: {
+      mode: 'free',
+      x,
+      y,
+      width,
+      height,
+      minWidth: 4,
+      minHeight: 4,
+      maxWidth: 100,
+      maxHeight: 100,
+      lockAspectRatio: false,
+      locked: false,
+      zIndex: index,
+      nudgeStep: 1,
+    },
+  };
+  return {
+    template: {
+      ...migrated,
+      grid: {
+        ...migrated.grid,
+        dataCells: [...migrated.grid.dataCells, block],
+      },
+    },
+    block,
+  };
 }
 
 export function createFrame360Template(input: {
