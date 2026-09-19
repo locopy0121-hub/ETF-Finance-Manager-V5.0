@@ -483,9 +483,7 @@ export default function Frame360Runtime({
       .sort((a, b) => {
         const z = (a.layout?.zIndex ?? 0) - (b.layout?.zIndex ?? 0);
         if (z !== 0) return z;
-        return a.rowStart === b.rowStart
-          ? a.columnStart - b.columnStart
-          : a.rowStart - b.rowStart;
+        return a.id.localeCompare(b.id);
       }),
     [template],
   );
