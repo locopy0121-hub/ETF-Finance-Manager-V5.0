@@ -2,7 +2,16 @@ import type { DeepReadonly, FrozenDraftSnapshot } from '../types/pipeline';
 import type { ConfigurationTree } from '../types/editor';
 import { DraftSandboxStore } from './DraftSandboxStore';
 
-export class GovernanceCommitPreparationPort {
+export interface IGovernanceCommitPreparationPort {
+  checkDuplicateSubmitGate(sessionId: string): { readonly isDuplicate: boolean };
+  releaseDuplicateSubmitGate(sessionId: string): void;
+  freezeDraftForCommit(sessionId: string):
+    | { readonly success: true; readonly snapshot: FrozenDraftSnapshot }
+    | { readonly success: false; readonly errorCode: string };
+  getSessionBaselineSnapshot(sessionId: string): DeepReadonly<ConfigurationTree> | null;
+}
+
+export class GovernanceCommitPreparationPort implements IGovernanceCommitPreparationPort {
   private activeCommitSessions = new Set<string>();
 
   constructor(private draftStore: DraftSandboxStore) {}
