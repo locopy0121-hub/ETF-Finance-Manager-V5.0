@@ -217,6 +217,7 @@ export function PageFrame({
   const fields = pageFieldsForFrame(prefs, page, cardId);
   const visualNodes = describeVisibleNodes(children);
   const descriptors: Global360NodeDescriptor[] = [
+    { id: 'frame:root', label: '框架本體', kind: 'container' as const },
     ...fields.map(key => ({
       id: `field:${key}`,
       label: key,
@@ -231,6 +232,7 @@ export function PageFrame({
   const renderedChildren = savedTemplate
     ? applyGlobal360NodeStyles(children, savedTemplate)
     : children;
+  const frameOverride = nodeOverrideStyle(savedTemplate, 'frame:root', false);
   return (
     <View
       style={[
@@ -244,6 +246,7 @@ export function PageFrame({
             }
           : undefined,
         style,
+        frameOverride,
       ]}
     >
       {renderedChildren}
