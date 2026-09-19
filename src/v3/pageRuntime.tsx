@@ -101,7 +101,7 @@ function nodeOverrideStyle(
   nodeId: string,
   isText: boolean,
 ): any {
-  const cell = template?.grid.dataCells.find(item => item.targetNodeId === nodeId);
+  const cell = template?.blocks.find(item => item.targetNodeId === nodeId);
   if (!cell) return undefined;
   const style = cell.style;
   const horizontal =
