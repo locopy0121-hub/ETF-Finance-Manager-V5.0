@@ -215,6 +215,30 @@ function UserCreatedPageFrame({
   );
 }
 
+export function PageAddedFrames({
+  prefs,
+  page,
+}: {
+  prefs: V3Preferences;
+  page: PageFieldKey;
+}) {
+  return (
+    <>
+      {(prefs.pageLayouts?.[page]?.cards ?? [])
+        .filter(card => card.kind === 'custom')
+        .map(card => (
+          <UserCreatedPageFrame
+            key={card.id}
+            prefs={prefs}
+            page={page}
+            cardId={card.id}
+            title={card.title}
+          />
+        ))}
+    </>
+  );
+}
+
 export function PageFrameStack({
   prefs,
   page,
