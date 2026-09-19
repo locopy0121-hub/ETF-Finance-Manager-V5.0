@@ -57,6 +57,8 @@ export type Frame360ComponentKind =
   | 'progress'
   | 'status';
 
+export type Frame360ColorRule = 'auto' | 'fixed' | 'pnl' | 'market';
+
 export type Frame360CellStyle = {
   alignment: Frame360Alignment;
   backgroundColor?: string;
@@ -66,14 +68,28 @@ export type Frame360CellStyle = {
   radius?: number;
   opacity?: number;
   padding?: number;
+  margin?: number;
   fontSize?: number;
   fontWeight?: '400' | '600' | '700' | '800' | '900';
+  letterSpacing?: number;
+  lineHeight?: number;
+  shadowOpacity?: number;
+  shadowRadius?: number;
+  elevation?: number;
+  visible?: boolean;
 };
 
 export type Frame360CellContent =
   | { kind: 'empty' }
   | { kind: 'text'; text: string }
-  | { kind: 'data'; binding: string; label?: string }
+  | {
+      kind: 'data';
+      binding: string;
+      label?: string;
+      formula?: string;
+      format?: 'text' | 'number' | 'currency' | 'percent';
+      colorRule?: Frame360ColorRule;
+    }
   | { kind: 'image'; uri?: string; fit?: 'contain' | 'cover' }
   | { kind: 'icon'; icon: string }
   | { kind: 'chart'; chartType: string; binding: string }
@@ -133,6 +149,12 @@ export const DEFAULT_FRAME360_STYLE: Frame360CellStyle = {
   radius: 8,
   fontSize: 12,
   fontWeight: '700',
+  letterSpacing: 0,
+  lineHeight: 16,
+  shadowOpacity: 0,
+  shadowRadius: 0,
+  elevation: 0,
+  visible: true,
 };
 
 const makeCellId = (row: number, column: number) => `r${row}c${column}`;
