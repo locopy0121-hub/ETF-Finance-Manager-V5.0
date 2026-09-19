@@ -780,7 +780,7 @@ export default function Frame360EditorModal({
         '選取的方塊已有多筆內容，請選擇如何處理。系統不會自動刪除資料。',
         [
           {
-            text: '保留第一格',
+            text: '保留第一方塊',
             onPress: () => {
               const next = mergeFrame360Cells(draft.grid, selected, 'keepFirst');
               if (next.status === 'merged') {
@@ -791,7 +791,7 @@ export default function Frame360EditorModal({
             },
           },
           {
-            text: '保留最後一格',
+            text: '保留最後一方塊',
             onPress: () => {
               const next = mergeFrame360Cells(draft.grid, selected, 'keepLast');
               if (next.status === 'merged') {
