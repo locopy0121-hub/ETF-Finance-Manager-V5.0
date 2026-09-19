@@ -1,0 +1,4 @@
+V5.0.4 Block Workspace build trigger
+scope=cell-to-block migration + page-level add-frame + active-frame workspace binding
+versionName=5.0.4
+versionCode=50004
