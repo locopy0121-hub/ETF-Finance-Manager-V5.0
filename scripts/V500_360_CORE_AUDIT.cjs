@@ -9,6 +9,8 @@ const required = [
   'src/v3/frame360Defaults.ts',
   'src/v3/components/Frame360EditorModal.tsx',
   'src/v3/components/Frame360Runtime.tsx',
+  'src/v3/components/Global360Context.tsx',
+  'src/v3/pageRuntime.tsx',
 ];
 
 const fail = message => {
@@ -75,7 +77,10 @@ for (const token of [
   'handleCellLongPress',
   'setDeepDialog(true)',
   '即時預覽框',
-  'renderLockedGrid(true)',
+  '<Frame360Runtime',
+  '公式 / 運算式',
+  '顏色規則',
+  '顯示狀態',
 ]) {
   if (!editor.includes(token)) {
     fail(`360 editor missing V5 interaction contract: ${token}`);
@@ -94,6 +99,67 @@ const bannedVisibleEnglish = [
 for (const token of bannedVisibleEnglish) {
   if (editor.includes(token)) {
     fail(`360 editor visible English residue: ${token}`);
+  }
+}
+
+
+const globalContext = fs.readFileSync(
+  'src/v3/components/Global360Context.tsx',
+  'utf8',
+);
+for (const token of [
+  'Global360Provider',
+  'Global360NodeDescriptor',
+  'resolveTemplate',
+  'frame360Templates',
+  'targetNodeId',
+]) {
+  if (!globalContext.includes(token)) {
+    fail(`Global 360 context missing contract: ${token}`);
+  }
+}
+
+const pageRuntime = fs.readFileSync('src/v3/pageRuntime.tsx', 'utf8');
+for (const token of [
+  'describeVisibleNodes',
+  'applyGlobal360NodeStyles',
+  'global360.openFrame',
+  'accessibilityHint="長按進入此區塊的 360 編輯器"',
+]) {
+  if (!pageRuntime.includes(token)) {
+    fail(`PageFrame is not globally editable: ${token}`);
+  }
+}
+
+const runtime = fs.readFileSync(
+  'src/v3/components/Frame360Runtime.tsx',
+  'utf8',
+);
+for (const token of [
+  'evaluateFormula',
+  'formatDataValue',
+  'resolveDataColor',
+  'cell.style.visible === false',
+]) {
+  if (!runtime.includes(token)) {
+    fail(`360 runtime missing deep feature: ${token}`);
+  }
+}
+
+const headers = [
+  ['src/v3/screens/DashboardScreen.tsx', 'dashboard-header'],
+  ['src/v3/screens/PortfolioScreen.tsx', 'portfolio-header'],
+  ['src/v3/screens/DividendScreen.tsx', 'dividend-header'],
+  ['src/v3/screens/LedgerScreen.tsx', 'ledger-header'],
+  ['src/v3/screens/MarketScreen.tsx', 'market-header'],
+  ['src/v3/screens/AIScreen.tsx', 'ai-header'],
+  ['src/v3/screens/HoldingDetailScreen.tsx', 'detail-header'],
+  ['src/v3/screens/SettingsScreen.tsx', 'settings-header'],
+  ['src/v3/screensBase.tsx', 'calculator-header'],
+];
+for (const [file, marker] of headers) {
+  if (!fs.readFileSync(file, 'utf8').includes(marker)) {
+    fail(`Global 360 header coverage missing: ${marker}`);
   }
 }
 
