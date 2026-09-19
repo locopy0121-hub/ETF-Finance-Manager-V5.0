@@ -222,6 +222,7 @@ export function PageAddedFrames({
   prefs: V3Preferences;
   page: PageFieldKey;
 }) {
+  if (page === 'settings') return null;
   return (
     <>
       {(prefs.pageLayouts?.[page]?.cards ?? [])
@@ -265,7 +266,9 @@ export function PageFrameStack({
       .map(node => String((node as React.ReactElement<{ cardId?: string }>).props.cardId ?? ''))
       .filter(Boolean),
   );
-  const customFrames = (prefs.pageLayouts?.[page]?.cards ?? [])
+  const customFrames = page === 'settings'
+    ? []
+    : (prefs.pageLayouts?.[page]?.cards ?? [])
     .filter(card => card.kind === 'custom' && !existingIds.has(card.id))
     .map(card => (
       <UserCreatedPageFrame
@@ -301,8 +304,7 @@ export function PageFrame({
 }) {
   // Settings must remain recoverable even if its own frame is accidentally hidden.
   if (page !== 'settings' && !pageCardVisible(prefs, page, cardId)) return null;
-  const editActive =
-    prefs.globalEditMode || Boolean(prefs.monitoring?.pageCustomize?.[page]);
+  const editActive = page !== 'settings' && Boolean(prefs.globalEditMode);
   const global360 = useGlobal360();
   const fields = pageFieldsForFrame(prefs, page, cardId);
   const visualNodes = describeVisibleNodes(children);
@@ -340,7 +342,7 @@ export function PageFrame({
       ]}
     >
       {renderedChildren}
-      {editActive && global360.enabled ? (
+      {editActive && global360.canEditPage(page) ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`360 編輯 ${cardId}`}
@@ -360,7 +362,7 @@ export function PageFrame({
           }}
         />
       ) : null}
-      {editActive && global360.enabled && cardId === `${page}-header` ? (
+      {editActive && global360.canEditPage(page) && cardId === `${page}-header` ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`新增 ${page} 頁面框架`}
@@ -380,6 +382,56 @@ export function PageFrame({
         >
           <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900' }}>＋新增</Text>
         </Pressable>
+      ) : null}
+      {editActive &&
+      global360.canEditPage(page) &&
+      (prefs.pageLayouts?.[page]?.cards ?? []).find(item => item.id === cardId)?.kind === 'custom' ? (
+        <View
+          pointerEvents="box-none"
+          style={{
+            position: 'absolute',
+            right: 8,
+            bottom: 8,
+            zIndex: 1002,
+            flexDirection: 'row',
+            gap: 6,
+          }}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="複製框架"
+            onPress={() => global360.duplicatePageFrame(page, cardId)}
+            style={{
+              minHeight: 30,
+              borderRadius: 999,
+              backgroundColor: '#EFF6FF',
+              borderWidth: 1,
+              borderColor: '#93C5FD',
+              paddingHorizontal: 10,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ color: '#0066FF', fontSize: 10, fontWeight: '900' }}>複製</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="刪除框架"
+            onPress={() => global360.deletePageFrame(page, cardId)}
+            style={{
+              minHeight: 30,
+              borderRadius: 999,
+              backgroundColor: '#FEF2F2',
+              borderWidth: 1,
+              borderColor: '#FCA5A5',
+              paddingHorizontal: 10,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ color: '#DC2626', fontSize: 10, fontWeight: '900' }}>刪除</Text>
+          </Pressable>
+        </View>
       ) : null}
     </View>
   );
