@@ -22,6 +22,8 @@ import { PAGE_REGISTRY, type PageFieldKey } from '../pageRegistry';
 import { normalizeGridMonitor } from '../monitoring';
 import { PageFrame } from '../pageRuntime';
 import FontScaleScope from '../components/FontScaleScope';
+import Frame360EditorModal from '../components/Frame360EditorModal';
+import { createFrame360Template, type Frame360Template } from '../frame360';
 import {
   EFFECT_KINDS,
   effectDefaults,
@@ -1166,6 +1168,7 @@ export function SettingsScreen({
   });
   const [selectedPage, setSelectedPage] = useState<PageFieldKey>('dashboard');
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [editing360TemplateId, setEditing360TemplateId] = useState<string | null>(null);
   const [monitorTarget, setMonitorTarget] =
     useState<'appBoard' | 'floating' | 'widget'>('floating');
   const [safetyBackups, setSafetyBackups] = useState<SafetyBackup[]>([]);
@@ -1189,6 +1192,10 @@ export function SettingsScreen({
   const pageCards = pageLayout?.cards ?? [];
   const editingCard =
     pageCards.find(card => card.id === editingCardId) ?? null;
+  const frame360Templates = prefs.frame360Templates ?? {};
+  const editing360Template = editing360TemplateId
+    ? frame360Templates[editing360TemplateId] ?? null
+    : null;
   const monitor = prefs.monitoring[monitorTarget];
   const gridMonitor = prefs.monitoring.gridMonitor;
   const selectedBroker =
@@ -1284,6 +1291,41 @@ export function SettingsScreen({
     });
   };
 
+  const open360Frame = (card: V3PageCard) => {
+    const templateId = `${selectedPage}:${card.id}`;
+    const existing = frame360Templates[templateId];
+    const template =
+      existing ??
+      createFrame360Template({
+        id: templateId,
+        surface: selectedPage,
+        templateKey: card.role === 'listTemplate' ? 'shared-list-template' : card.id,
+        name: card.title,
+        rows: 2,
+        columns: 5,
+      });
+
+    if (!existing) {
+      onChange({
+        frame360Templates: {
+          ...frame360Templates,
+          [templateId]: template,
+        },
+      });
+    }
+    setEditing360TemplateId(templateId);
+  };
+
+  const save360Frame = (template: Frame360Template) => {
+    onChange({
+      frame360Templates: {
+        ...frame360Templates,
+        [template.id]: template,
+      },
+    });
+    setEditing360TemplateId(null);
+  };
+
   const saveFrame = (
     nextCard: V3PageCard,
     _draft: PageFrameEditorDraft,
@@ -1326,10 +1368,10 @@ export function SettingsScreen({
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>SETTINGS / PAGE FRAME EDITOR 2.0</Text>
+        <Text style={styles.eyebrow}>360 設定控制中心</Text>
         <Text style={styles.pageTitle}>設定與頁面編輯器</Text>
         <Text style={styles.pageSubtitle}>
-          Page Frame Editor 2.0 與舊版百寶箱功能統一收納；只改 UI、監控、通知與系統設定，不改金融計算。
+          360 負責框架、格線、資料格、資料連接與組件設定；金融計算核心保持唯讀。
         </Text>
       </View>
 
@@ -1363,7 +1405,7 @@ export function SettingsScreen({
           ]}
         />
         <Text style={styles.statusText}>
-          {isEditModeActive ? 'Page Frame Editor 已啟用' : '一般瀏覽模式'}
+          {isEditModeActive ? '360 編輯模式已啟用' : '一般瀏覽模式'}
         </Text>
       </View>
 
@@ -1500,12 +1542,20 @@ export function SettingsScreen({
                         />
                       )}
                       {card.role !== 'module' ? (
-                        <Pressable
-                          onPress={() => setEditingCardId(card.id)}
-                          style={styles.gearButton}
-                        >
-                          <Text style={styles.gearText}>⚙️</Text>
-                        </Pressable>
+                        <>
+                          <Pressable
+                            onPress={() => open360Frame(card)}
+                            style={styles.gearButton}
+                          >
+                            <Text style={styles.gearText}>360</Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => setEditingCardId(card.id)}
+                            style={styles.gearButton}
+                          >
+                            <Text style={styles.gearText}>⚙️</Text>
+                          </Pressable>
+                        </>
                       ) : null}
                     </View>
                   ))}
@@ -2225,6 +2275,13 @@ export function SettingsScreen({
         ))}
       </View>
       </PageFrame>
+
+      <Frame360EditorModal
+        visible={!!editing360Template}
+        template={editing360Template}
+        onClose={() => setEditing360TemplateId(null)}
+        onSave={save360Frame}
+      />
 
       <PageFrameEditorModal
         visible={!!editingCard}
