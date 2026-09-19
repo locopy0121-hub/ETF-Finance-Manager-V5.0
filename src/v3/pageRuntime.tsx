@@ -1,9 +1,10 @@
 import React from 'react';
-import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import type { PageFieldKey } from './pageRegistry';
 import type { V3Preferences } from './model';
-import { useGlobal360 } from './components/Global360Context';
+import { useGlobal360, type Global360NodeDescriptor } from './components/Global360Context';
+import type { Frame360Template } from './frame360';
 
 const QUOTE_FIELDS = new Set(['price', 'previousClose', 'open', 'high', 'low', 'volume', 'marketValue', 'changePct']);
 const TODAY_FIELDS = new Set(['todayPnl', 'todayPnlPct']);
@@ -51,6 +52,119 @@ export function pageCardOrder(prefs: V3Preferences, page: PageFieldKey, cardId: 
   const cards = prefs.pageLayouts?.[page]?.cards ?? [];
   const index = cards.findIndex(item => item.id === cardId);
   return index >= 0 ? index : fallback;
+}
+
+function describeVisibleNodes(
+  nodes: React.ReactNode,
+  prefix = 'node',
+  output: Global360NodeDescriptor[] = [],
+) {
+  React.Children.forEach(nodes, (node, index) => {
+    if (!React.isValidElement(node) || output.length >= 40) return;
+    const id = `${prefix}.${index}`;
+    const props = node.props as { children?: React.ReactNode };
+    const directText = React.Children.toArray(props.children)
+      .filter(item => typeof item === 'string' || typeof item === 'number')
+      .join(' ')
+      .trim();
+    if (directText) {
+      output.push({
+        id,
+        label: directText.slice(0, 48),
+        kind: 'text',
+      });
+    } else if (node.type !== React.Fragment) {
+      const rawName =
+        typeof node.type === 'function'
+          ? node.type.displayName || node.type.name
+          : typeof node.type === 'string'
+            ? node.type
+            : '';
+      if (rawName && rawName !== 'View' && rawName !== 'Text') {
+        output.push({
+          id,
+          label: rawName.slice(0, 48),
+          kind: 'component',
+        });
+      }
+    }
+    if (props.children) describeVisibleNodes(props.children, id, output);
+  });
+  return output;
+}
+
+function nodeOverrideStyle(
+  template: Frame360Template | undefined,
+  nodeId: string,
+  isText: boolean,
+) {
+  const cell = template?.grid.dataCells.find(item => item.targetNodeId === nodeId);
+  if (!cell) return undefined;
+  const style = cell.style;
+  const horizontal =
+    style.alignment.includes('Right')
+      ? 'right'
+      : style.alignment.includes('Left')
+        ? 'left'
+        : 'center';
+  const vertical =
+    style.alignment.startsWith('top')
+      ? 'flex-start'
+      : style.alignment.startsWith('bottom')
+        ? 'flex-end'
+        : 'center';
+  return {
+    display: style.visible === false ? 'none' : undefined,
+    backgroundColor: style.backgroundColor,
+    borderColor: style.borderColor,
+    borderWidth: style.borderWidth,
+    borderRadius: style.radius,
+    opacity: style.opacity == null ? undefined : style.opacity / 100,
+    padding: style.padding,
+    margin: style.margin,
+    shadowOpacity: style.shadowOpacity,
+    shadowRadius: style.shadowRadius,
+    elevation: style.elevation,
+    ...(isText
+      ? {
+          color: style.textColor,
+          fontSize: style.fontSize,
+          fontWeight: style.fontWeight,
+          letterSpacing: style.letterSpacing,
+          lineHeight: style.lineHeight,
+          textAlign: horizontal,
+        }
+      : {
+          alignItems:
+            horizontal === 'left'
+              ? 'flex-start'
+              : horizontal === 'right'
+                ? 'flex-end'
+                : 'center',
+          justifyContent: vertical,
+        }),
+  };
+}
+
+function applyGlobal360NodeStyles(
+  nodes: React.ReactNode,
+  template: Frame360Template | undefined,
+  prefix = 'node',
+): React.ReactNode {
+  return React.Children.map(nodes, (node, index) => {
+    if (!React.isValidElement(node)) return node;
+    const id = `${prefix}.${index}`;
+    const props = node.props as { children?: React.ReactNode; style?: unknown };
+    const nextChildren = props.children
+      ? applyGlobal360NodeStyles(props.children, template, id)
+      : props.children;
+    const override = nodeOverrideStyle(template, id, node.type === Text);
+    return React.cloneElement(node as React.ReactElement<any>, {
+      ...props,
+      style: override ? [props.style, override] : props.style,
+      children: nextChildren,
+    });
+  });
 }
 
 export function PageFrameStack({
@@ -101,6 +215,22 @@ export function PageFrame({
     prefs.globalEditMode || Boolean(prefs.monitoring?.pageCustomize?.[page]);
   const global360 = useGlobal360();
   const fields = pageFieldsForFrame(prefs, page, cardId);
+  const visualNodes = describeVisibleNodes(children);
+  const descriptors: Global360NodeDescriptor[] = [
+    ...fields.map(key => ({
+      id: `field:${key}`,
+      label: key,
+      binding: key,
+      kind: 'data' as const,
+    })),
+    ...visualNodes.filter(
+      node => !fields.some(key => node.label === key || node.id === `field:${key}`),
+    ),
+  ].slice(0, 40);
+  const savedTemplate = global360.resolveTemplate(page, cardId);
+  const renderedChildren = savedTemplate
+    ? applyGlobal360NodeStyles(children, savedTemplate)
+    : children;
   return (
     <View
       style={[
@@ -116,7 +246,7 @@ export function PageFrame({
         style,
       ]}
     >
-      {children}
+      {renderedChildren}
       {editActive && global360.enabled ? (
         <Pressable
           accessibilityRole="button"
@@ -124,7 +254,7 @@ export function PageFrame({
           accessibilityHint="長按進入此區塊的 360 編輯器"
           delayLongPress={360}
           onPress={() => undefined}
-          onLongPress={() => global360.openFrame(page, cardId, fields, cardId)}
+          onLongPress={() => global360.openFrame(page, cardId, descriptors, cardId)}
           style={{
             position: 'absolute',
             left: 0,
