@@ -6,6 +6,7 @@ on:
       - main
     paths-ignore:
       - '.build-results/**'
+      - '.github/workflows/build-android-apk.yml'
   workflow_dispatch:
 
 permissions:
@@ -206,6 +207,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git reset --hard HEAD
+          git fetch origin main
+          git rebase origin/main
           mkdir -p .build-results
           {
             echo "status=${{ job.status }}"
@@ -215,11 +221,6 @@ jobs:
             echo "versionName=5.0.1"
             echo "versionCode=50001"
           } > .build-results/latest-apk.txt
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git restore android/gradle.properties 2>/dev/null || true
-          git fetch origin main
-          git rebase origin/main
           git add .build-results/latest-apk.txt
           if ! git diff --cached --quiet; then
             git commit -m "build: record completed V5.0.1 APK [skip ci]"
