@@ -1,3 +1,6 @@
+import type {
+  PersistedSurfaceNode,
+} from '../types/editor';
 import type { IDiagnosticObservationPort } from '../types/diagnostic';
 import type { SessionMutationRequest, SessionMutationResult } from '../types/session';
 import type { IRegistryContractProvider } from './FiveLayerConfigResolver';
@@ -34,20 +37,27 @@ export class ConfigGovernanceMutationPort {
       request.sessionId,
       (workingTree) => {
         const path = splitPath(request.targetPath);
-        if (request.kind === 'SET_GOVERNANCE_INTENT') {
-          if (
-            path.length === 2 &&
-            path[0] === 'surfaces' &&
-            workingTree.surfaces[path[1]]
-          ) {
-            const current = workingTree.surfaces[path[1]];
-            workingTree.surfaces = {
-              ...workingTree.surfaces,
-              [path[1]]: { ...current, governanceIntent: request.governanceIntent },
-            };
-            return { success: true, result: undefined };
-          }
-          return { success: false, result: undefined };
+        if (
+          request.kind === 'SET_GOVERNANCE_INTENT' &&
+          path.length === 2 &&
+          path[0] === 'surfaces'
+        ) {
+          const surfaceId = path[1];
+          const current = workingTree.surfaces[surfaceId];
+          if (!current) return { success: false, result: undefined };
+
+          const nextSurface: PersistedSurfaceNode = {
+            ...current,
+            governanceIntent: request.governanceIntent,
+          };
+          const mutable = workingTree as unknown as {
+            surfaces: Record<string, PersistedSurfaceNode>;
+          };
+          mutable.surfaces = {
+            ...workingTree.surfaces,
+            [surfaceId]: nextSurface,
+          };
+          return { success: true, result: undefined };
         }
         return { success: false, result: undefined };
       }
