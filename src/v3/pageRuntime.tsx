@@ -72,6 +72,7 @@ function describeVisibleNodes(
       output.push({
         id,
         label: directText.slice(0, 48),
+        previewValue: directText,
         kind: 'text',
       });
     } else if (node.type !== React.Fragment) {
