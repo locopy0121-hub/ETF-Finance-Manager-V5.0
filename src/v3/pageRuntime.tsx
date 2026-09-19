@@ -196,7 +196,7 @@ function UserCreatedPageFrame({
           overflow: 'hidden',
         }}
       >
-        {template && template.grid.dataCells.length ? (
+        {template && template.blocks.length ? (
           <Frame360Runtime
             template={template}
             data={{}}
@@ -311,7 +311,6 @@ export function PageFrame({
   const fields = pageFieldsForFrame(prefs, page, cardId);
   const visualNodes = describeVisibleNodes(children);
   const descriptors: Global360NodeDescriptor[] = [
-    { id: 'frame:root', label: '框架本體', kind: 'container' as const },
     ...fields.map(key => ({
       id: `field:${key}`,
       label: key,
