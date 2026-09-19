@@ -201,6 +201,91 @@ function CellContent({
   return null;
 }
 
+
+function RuntimeCellSurface({
+  cell,
+  style,
+  children,
+}: {
+  cell: Frame360DataCell;
+  style: Record<string, unknown>;
+  children: React.ReactNode;
+}) {
+  const value = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const effect = cell.style.effect ?? 'none';
+    value.stopAnimation();
+    value.setValue(1);
+    if (effect === 'none') return;
+
+    const low =
+      effect === 'blink'
+        ? 0.15
+        : effect === 'fade'
+          ? 0.35
+          : 0.65;
+    const duration =
+      effect === 'blink'
+        ? 360
+        : effect === 'jump'
+          ? 520
+          : 820;
+
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(value, {
+          toValue: low,
+          duration,
+          useNativeDriver: true,
+        }),
+        Animated.timing(value, {
+          toValue: 1,
+          duration,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [cell.style.effect, value]);
+
+  const effect = cell.style.effect ?? 'none';
+  const animatedStyle =
+    effect === 'jump'
+      ? {
+          transform: [
+            {
+              translateY: value.interpolate({
+                inputRange: [0, 1],
+                outputRange: [-3, 0],
+              }),
+            },
+          ],
+        }
+      : effect === 'pulse' || effect === 'breathe'
+        ? {
+            transform: [
+              {
+                scale: value.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.97, 1],
+                }),
+              },
+            ],
+            opacity: value,
+          }
+        : effect === 'none'
+          ? undefined
+          : { opacity: value };
+
+  return (
+    <Animated.View style={[styles.cell, style, animatedStyle]}>
+      {children}
+    </Animated.View>
+  );
+}
+
 export default function Frame360Runtime({
   template,
   data,
@@ -239,36 +324,34 @@ export default function Frame360Runtime({
               : 'center';
 
         return (
-          <View
+          <RuntimeCellSurface
             key={cell.id}
-            style={[
-              styles.cell,
-              {
-                left: `${left}%`,
-                top: `${top}%`,
-                width: `${width}%`,
-                height,
-                alignItems: align,
-                justifyContent: justify,
-                padding: cell.style.padding ?? 8,
-                margin: cell.style.margin ?? 0,
-                borderRadius: cell.style.radius ?? 8,
-                opacity: (cell.style.opacity ?? 100) / 100,
-                backgroundColor: cell.style.backgroundColor ?? 'transparent',
-                borderColor: cell.style.borderColor ?? 'transparent',
-                borderWidth: cell.style.borderWidth ?? 0,
-                shadowOpacity: cell.style.shadowOpacity ?? 0,
-                shadowRadius: cell.style.shadowRadius ?? 0,
-                elevation: cell.style.elevation ?? 0,
-              },
-            ]}
+            cell={cell}
+            style={{
+              left: `${left}%`,
+              top: `${top}%`,
+              width: `${width}%`,
+              height,
+              alignItems: align,
+              justifyContent: justify,
+              padding: cell.style.padding ?? 8,
+              margin: cell.style.margin ?? 0,
+              borderRadius: cell.style.radius ?? 8,
+              opacity: (cell.style.opacity ?? 100) / 100,
+              backgroundColor: cell.style.backgroundColor ?? 'transparent',
+              borderColor: cell.style.borderColor ?? 'transparent',
+              borderWidth: cell.style.borderWidth ?? 0,
+              shadowOpacity: cell.style.shadowOpacity ?? 0,
+              shadowRadius: cell.style.shadowRadius ?? 0,
+              elevation: cell.style.elevation ?? 0,
+            }}
           >
             <CellContent
               cell={cell}
               data={data}
               reminderContext={reminderContext}
             />
-          </View>
+          </RuntimeCellSurface>
         );
       })}
     </View>
