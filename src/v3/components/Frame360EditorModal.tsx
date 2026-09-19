@@ -374,6 +374,26 @@ export default function Frame360EditorModal({
     ...cell.layout,
   });
 
+  useEffect(() => {
+    if (!deepDialog || !deepCell || !draft) return;
+    const layout = getDefaultLayout(deepCell);
+    setNumericDraft({
+      x: String(Math.round((layout.x / 100) * Math.max(1, draft.canvas.width))),
+      y: String(Math.round((layout.y / 100) * Math.max(1, draft.canvas.height))),
+      width: String(Math.round((layout.width / 100) * Math.max(1, draft.canvas.width))),
+      height: String(Math.round((layout.height / 100) * Math.max(1, draft.canvas.height))),
+    });
+  }, [
+    deepDialog,
+    deepCell?.id,
+    deepCell?.layout?.x,
+    deepCell?.layout?.y,
+    deepCell?.layout?.width,
+    deepCell?.layout?.height,
+    draft?.canvas.width,
+    draft?.canvas.height,
+  ]);
+
   const rectsOverlap = (a: any, b: any) => {
     const epsilon = 0.05;
     return (
@@ -835,7 +855,7 @@ export default function Frame360EditorModal({
   const duplicateBlock = (cellId: string) => {
     if (!draft || editorLocked) return;
     const source = draft.blocks.find(cell => cell.id === cellId);
-    if (!source) return;
+    if (!source || source.layout?.locked) return;
     const copy = JSON.parse(JSON.stringify(source)) as Frame360Block;
     copy.id = `block-${Date.now()}-copy`;
     const layout = getDefaultLayout(source);
@@ -861,6 +881,8 @@ export default function Frame360EditorModal({
 
   const deleteBlock = (cellId: string) => {
     if (!draft || editorLocked) return;
+    const source = draft.blocks.find(cell => cell.id === cellId);
+    if (!source || source.layout?.locked) return;
     setDraft(current =>
       current
         ? {
@@ -1321,6 +1343,10 @@ export default function Frame360EditorModal({
                         const value = Number(numericDraft.y);
                         if (Number.isFinite(value)) updateBlockLayout(deepCell.id, layout => ({ ...layout, y: (value / Math.max(1, draft.canvas.height)) * 100 }));
                       }}
+                      onSubmitEditing={() => {
+                        const value = Number(numericDraft.y);
+                        if (Number.isFinite(value)) updateBlockLayout(deepCell.id, layout => ({ ...layout, y: (value / Math.max(1, draft.canvas.height)) * 100 }));
+                      }}
                       style={styles.deepInput}
                     />
                   </View>
@@ -1337,6 +1363,10 @@ export default function Frame360EditorModal({
                         const value = Number(numericDraft.width);
                         if (Number.isFinite(value) && value > 0) updateBlockLayout(deepCell.id, layout => ({ ...layout, width: (value / Math.max(1, draft.canvas.width)) * 100, editorUnit: 'px' }));
                       }}
+                      onSubmitEditing={() => {
+                        const value = Number(numericDraft.width);
+                        if (Number.isFinite(value) && value > 0) updateBlockLayout(deepCell.id, layout => ({ ...layout, width: (value / Math.max(1, draft.canvas.width)) * 100, editorUnit: 'px' }));
+                      }}
                       style={styles.deepInput}
                     />
                   </View>
@@ -1348,6 +1378,10 @@ export default function Frame360EditorModal({
                       value={numericDraft.height}
                       onChangeText={value => setNumericDraft(current => ({ ...current, height: value }))}
                       onBlur={() => {
+                        const value = Number(numericDraft.height);
+                        if (Number.isFinite(value) && value > 0) updateBlockLayout(deepCell.id, layout => ({ ...layout, height: (value / Math.max(1, draft.canvas.height)) * 100, editorUnit: 'px' }));
+                      }}
+                      onSubmitEditing={() => {
                         const value = Number(numericDraft.height);
                         if (Number.isFinite(value) && value > 0) updateBlockLayout(deepCell.id, layout => ({ ...layout, height: (value / Math.max(1, draft.canvas.height)) * 100, editorUnit: 'px' }));
                       }}
@@ -1389,11 +1423,12 @@ export default function Frame360EditorModal({
                   <Pressable disabled={editorLocked || Boolean(deepCell.layout?.locked)} style={[styles.choice,(editorLocked || Boolean(deepCell.layout?.locked)) && styles.disabled]} onPress={() => setLayer(deepCell.id, 'bottom')}><Text style={styles.choiceText}>最下層</Text></Pressable>
                 </View>
                 <View style={styles.choiceWrap}>
-                  <Pressable style={styles.choice} onPress={() => duplicateBlock(deepCell.id)}>
+                  <Pressable disabled={editorLocked || Boolean(deepCell.layout?.locked)} style={[styles.choice,(editorLocked || Boolean(deepCell.layout?.locked)) && styles.disabled]} onPress={() => duplicateBlock(deepCell.id)}>
                     <Text style={styles.choiceText}>複製方塊</Text>
                   </Pressable>
                   <Pressable
-                    style={[styles.choice, styles.dangerChoice]}
+                    disabled={editorLocked || Boolean(deepCell.layout?.locked)}
+                    style={[styles.choice, styles.dangerChoice, (editorLocked || Boolean(deepCell.layout?.locked)) && styles.disabled]}
                     onPress={() =>
                       Alert.alert('刪除方塊', '確定刪除此方塊？', [
                         { text: '取消', style: 'cancel' },
