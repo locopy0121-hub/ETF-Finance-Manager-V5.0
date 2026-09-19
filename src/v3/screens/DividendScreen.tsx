@@ -215,7 +215,6 @@ export function DividendScreen({
       showsVerticalScrollIndicator={false}
     >
       <PageFrame prefs={common.prefs} page="dividend" cardId="dividend-header">
-      <PageFrame prefs={common.prefs} page="dividend" cardId="dividend-header">
       <View style={styles.headerRow}>
         <View style={styles.header}>
           <Text style={styles.eyebrow}>DIVIDEND TRACKER</Text>
@@ -237,7 +236,6 @@ export function DividendScreen({
           ) : null}
         </View>
       </View>
-      </PageFrame>
       </PageFrame>
 
       <PageFrameStack prefs={common.prefs} page="dividend">

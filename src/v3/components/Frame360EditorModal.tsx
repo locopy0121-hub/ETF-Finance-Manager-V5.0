@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 
 import {
   appendFrame360Block,
@@ -436,7 +437,7 @@ export default function Frame360EditorModal({
 
   const renderColorPalette = (
     label: string,
-    field: 'textColor' | 'textBackgroundColor' | 'backgroundColor' | 'borderColor',
+    field: 'textColor' | 'textBackgroundColor' | 'backgroundColor' | 'borderColor' | 'backgroundOverlayColor',
   ) => (
     <>
       <Text style={styles.deepLabel}>{label}</Text>
@@ -500,6 +501,51 @@ export default function Frame360EditorModal({
       />
     </>
   );
+
+  const renderColorRulePicker = (
+    label: string,
+    field: 'textColorRule' | 'textBackgroundColorRule' | 'backgroundColorRule' | 'borderColorRule',
+  ) => (
+    <>
+      <Text style={styles.deepLabel}>{label}</Text>
+      <View style={styles.choiceWrap}>
+        {([
+          ['fixed', '固定色'], ['theme', '主題色'], ['pnl', '損益色'], ['market', '行情狀態色'],
+        ] as const).map(([rule, ruleLabel]) => (
+          <Pressable
+            key={`${field}-${rule}`}
+            disabled={editorLocked}
+            onPress={() => deepCell && replaceCell(deepCell.id, cell => ({
+              ...cell,
+              style: { ...cell.style, [field]: rule },
+              content: field === 'textColorRule' && cell.content.kind === 'data'
+                ? { ...cell.content, colorRule: rule } : cell.content,
+            }))}
+            style={[styles.choice,(deepCell?.style[field] ?? 'fixed') === rule && styles.choiceActive,editorLocked && styles.disabled]}
+          >
+            <Text style={[styles.choiceText,(deepCell?.style[field] ?? 'fixed') === rule && styles.choiceTextActive]}>{ruleLabel}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </>
+  );
+
+  const pickImageForDeepCell = async (target: 'background' | 'content') => {
+    if (!deepCell || editorLocked) return;
+    const cellId = deepCell.id;
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 1 });
+      const uri = result.canceled ? undefined : result.assets?.[0]?.uri;
+      if (!uri) return;
+      replaceCell(cellId, cell => target === 'background'
+        ? {...cell,style:{...cell.style,backgroundImageUri:uri,backgroundImageFit:cell.style.backgroundImageFit??'cover',backgroundImageOpacity:cell.style.backgroundImageOpacity??100,backgroundImageScale:cell.style.backgroundImageScale??1,backgroundImageX:cell.style.backgroundImageX??0,backgroundImageY:cell.style.backgroundImageY??0,backgroundImageRotation:cell.style.backgroundImageRotation??0}}
+        : cell.content.kind === 'image'
+          ? {...cell,content:{...cell.content,uri,fit:cell.content.fit??'cover',opacity:cell.content.opacity??100,scale:cell.content.scale??1,x:cell.content.x??0,y:cell.content.y??0,rotation:cell.content.rotation??0}}
+          : cell);
+    } catch (error) {
+      Alert.alert('無法選擇圖片', error instanceof Error ? error.message : '請稍後再試');
+    }
+  };
 
   const renderSourcePicker = (
     cell: Frame360DataCell,
@@ -686,6 +732,7 @@ export default function Frame360EditorModal({
 
   const addBlock = () => {
     if (!draft || editorLocked) return;
+    setDeepDialog(false);
     const result = appendFrame360Block(draft);
     setDraft(result.template);
     setSelected([result.block.id]);
@@ -758,6 +805,7 @@ export default function Frame360EditorModal({
 
   const handleCellLongPress = (cell: Frame360DataCell) => {
     if (editorLocked || cell.layout?.locked) return;
+    setTypeDialog(false);
     setSelected([cell.id]);
     setMultiSelectMode(false);
     setDeepCellId(cell.id);
@@ -1045,7 +1093,7 @@ export default function Frame360EditorModal({
         </View>
       </Modal>
 
-      <Modal visible={gridDialog} transparent animationType="fade">
+      <Modal visible={gridDialog} transparent animationType="fade" onRequestClose={() => setGridDialog(false)}>
         <View style={styles.backdrop}>
           <View style={[styles.dialog, { paddingBottom: Math.max(18, insets.bottom + 12) }]}>
             <Text style={styles.dialogTitle}>調整目前框架工作區</Text>
@@ -1077,11 +1125,11 @@ export default function Frame360EditorModal({
         </View>
       </Modal>
 
-      <Modal visible={typeDialog} transparent animationType="fade">
+      <Modal visible={typeDialog} transparent animationType="fade" onRequestClose={() => setTypeDialog(false)}>
         <View style={styles.backdrop}>
           <View style={[styles.dialog, { paddingBottom: Math.max(18, insets.bottom + 12) }]}>
             <Text style={styles.dialogTitle}>選擇方塊類型</Text>
-            <ScrollView>
+            <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
               {FRAME360_CELL_TYPES.filter(item => item.kind !== 'empty').map(item => (
                 <Pressable
                   key={item.kind}
@@ -1100,7 +1148,7 @@ export default function Frame360EditorModal({
         </View>
       </Modal>
 
-      <Modal visible={deepDialog} transparent animationType="slide">
+      <Modal visible={deepDialog} transparent animationType="slide" onRequestClose={() => restoreDeepSnapshot(true)}>
         <View style={styles.backdrop}>
           <View
             style={[
@@ -1627,112 +1675,37 @@ export default function Frame360EditorModal({
                 {renderColorPalette('邊框顏色', 'borderColor')}
 
                 <Text style={styles.sectionTitle}>背景圖片</Text>
-                <Text style={styles.previewHint}>背景層與文字背景分離；此設定不會修改文字背景。</Text>
-                <TextInput
-                  editable={!editorLocked}
-                  value={deepCell.style.backgroundImageUri ?? ''}
-                  onChangeText={backgroundImageUri =>
-                    replaceCell(deepCell.id, cell => ({
-                      ...cell,
-                      style: { ...cell.style, backgroundImageUri },
-                    }))
-                  }
-                  placeholder="圖片 URI"
-                  style={styles.deepInput}
-                />
+                <Text style={styles.previewHint}>背景層與文字背景完全分離；背景圖可獨立選圖、縮放、位移、旋轉與調透明度。</Text>
                 <View style={styles.choiceWrap}>
-                  {[
-                    ['cover', '填滿'],
-                    ['contain', '完整'],
-                    ['stretch', '拉伸'],
-                    ['repeat', '平鋪'],
-                    ['original', '原尺寸'],
-                  ].map(([fit, label]) => (
-                    <Pressable
-                      key={fit}
-                      onPress={() =>
-                        replaceCell(deepCell.id, cell => ({
-                          ...cell,
-                          style: { ...cell.style, backgroundImageFit: fit as any },
-                        }))
-                      }
-                      style={[
-                        styles.choice,
-                        (deepCell.style.backgroundImageFit ?? 'cover') === fit && styles.choiceActive,
-                      ]}
-                    >
-                      <Text style={styles.choiceText}>{label}</Text>
-                    </Pressable>
+                  <Pressable disabled={editorLocked} onPress={() => void pickImageForDeepCell('background')} style={[styles.choice,editorLocked && styles.disabled]}><Text style={styles.choiceText}>🖼 從相簿選擇</Text></Pressable>
+                  <Pressable disabled={editorLocked || !deepCell.style.backgroundImageUri} onPress={() => replaceCell(deepCell.id,cell=>({...cell,style:{...cell.style,backgroundImageUri:undefined}}))} style={[styles.choice,(!deepCell.style.backgroundImageUri||editorLocked)&&styles.disabled]}><Text style={styles.choiceText}>移除背景圖</Text></Pressable>
+                </View>
+                <TextInput editable={!editorLocked} value={deepCell.style.backgroundImageUri ?? ''} onChangeText={backgroundImageUri=>replaceCell(deepCell.id,cell=>({...cell,style:{...cell.style,backgroundImageUri}}))} placeholder="圖片 URI" style={styles.deepInput}/>
+                <Text style={styles.deepLabel}>背景圖顯示模式</Text>
+                <View style={styles.choiceWrap}>
+                  {([['cover','填滿'],['contain','完整'],['stretch','拉伸'],['repeat','平鋪'],['original','原尺寸']] as const).map(([fit,label])=>(
+                    <Pressable key={fit} disabled={editorLocked} onPress={()=>replaceCell(deepCell.id,cell=>({...cell,style:{...cell.style,backgroundImageFit:fit}}))} style={[styles.choice,(deepCell.style.backgroundImageFit??'cover')===fit&&styles.choiceActive,editorLocked&&styles.disabled]}><Text style={styles.choiceText}>{label}</Text></Pressable>
                   ))}
                 </View>
-                <View style={styles.stepRow}>
-                  <Text style={styles.deepLabel}>背景圖透明度</Text>
-                  <Pressable
-                    style={styles.stepButton}
-                    onPress={() =>
-                      replaceCell(deepCell.id, cell => ({
-                        ...cell,
-                        style: {
-                          ...cell.style,
-                          backgroundImageOpacity: Math.max(0, (cell.style.backgroundImageOpacity ?? 100) - 5),
-                        },
-                      }))
-                    }
-                  >
-                    <Text style={styles.stepButtonText}>−</Text>
-                  </Pressable>
-                  <Text style={styles.stepValue}>{deepCell.style.backgroundImageOpacity ?? 100}%</Text>
-                  <Pressable
-                    style={styles.stepButton}
-                    onPress={() =>
-                      replaceCell(deepCell.id, cell => ({
-                        ...cell,
-                        style: {
-                          ...cell.style,
-                          backgroundImageOpacity: Math.min(100, (cell.style.backgroundImageOpacity ?? 100) + 5),
-                        },
-                      }))
-                    }
-                  >
-                    <Text style={styles.stepButtonText}>＋</Text>
-                  </Pressable>
+                <View style={styles.sizeRow}>
+                  <View style={styles.sizeField}><Text style={styles.deepLabel}>透明度 %</Text><TextInput editable={!editorLocked} keyboardType="decimal-pad" value={String(deepCell.style.backgroundImageOpacity??100)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundImageOpacity:Math.max(0,Math.min(100,Number(v)||0))}}))} style={styles.deepInput}/></View>
+                  <View style={styles.sizeField}><Text style={styles.deepLabel}>縮放</Text><TextInput editable={!editorLocked} keyboardType="decimal-pad" value={String(deepCell.style.backgroundImageScale??1)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundImageScale:Math.max(.1,Math.min(8,Number(v)||1))}}))} style={styles.deepInput}/></View>
                 </View>
-
-                <Text style={styles.deepLabel}>動態顏色來源</Text>
-                <View style={styles.choiceWrap}>
-                  {([
-                    ['fixed', '固定色'],
-                    ['theme', '主題色'],
-                    ['pnl', '損益色'],
-                    ['market', '行情狀態色'],
-                  ] as const).map(([rule, label]) => (
-                    <Pressable
-                      key={rule}
-                      onPress={() =>
-                        replaceCell(deepCell.id, cell => ({
-                          ...cell,
-                          style: {
-                            ...cell.style,
-                            textColorRule: rule,
-                            textBackgroundColorRule: rule,
-                          },
-                          content:
-                            cell.content.kind === 'data'
-                              ? { ...cell.content, colorRule: rule }
-                              : cell.content,
-                        }))
-                      }
-                      style={[
-                        styles.choice,
-                        (deepCell.content.kind === 'data'
-                          ? deepCell.content.colorRule ?? deepCell.style.textColorRule ?? 'fixed'
-                          : deepCell.style.textColorRule ?? 'fixed') === rule && styles.choiceActive,
-                      ]}
-                    >
-                      <Text style={styles.choiceText}>{label}</Text>
-                    </Pressable>
-                  ))}
+                <View style={styles.sizeRow}>
+                  <View style={styles.sizeField}><Text style={styles.deepLabel}>X 位移 px</Text><TextInput editable={!editorLocked} keyboardType="numbers-and-punctuation" value={String(deepCell.style.backgroundImageX??0)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundImageX:Math.max(-1000,Math.min(1000,Number(v)||0))}}))} style={styles.deepInput}/></View>
+                  <View style={styles.sizeField}><Text style={styles.deepLabel}>Y 位移 px</Text><TextInput editable={!editorLocked} keyboardType="numbers-and-punctuation" value={String(deepCell.style.backgroundImageY??0)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundImageY:Math.max(-1000,Math.min(1000,Number(v)||0))}}))} style={styles.deepInput}/></View>
                 </View>
+                <Text style={styles.deepLabel}>旋轉角度</Text>
+                <TextInput editable={!editorLocked} keyboardType="numbers-and-punctuation" value={String(deepCell.style.backgroundImageRotation??0)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundImageRotation:Math.max(-360,Math.min(360,Number(v)||0))}}))} style={styles.deepInput}/>
+                {renderColorPalette('背景遮罩顏色','backgroundOverlayColor')}
+                <Text style={styles.deepLabel}>背景遮罩透明度 %</Text>
+                <TextInput editable={!editorLocked} keyboardType="decimal-pad" value={String(deepCell.style.backgroundOverlayOpacity??0)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundOverlayOpacity:Math.max(0,Math.min(100,Number(v)||0))}}))} style={styles.deepInput}/>
+                <Text style={styles.sectionTitle}>顏色規則（互相獨立）</Text>
+                <Text style={styles.previewHint}>文字、文字背景、方塊背景與邊框各自設定，不再綁在同一個動態規則。</Text>
+                {renderColorRulePicker('文字顏色規則','textColorRule')}
+                {renderColorRulePicker('文字背景規則','textBackgroundColorRule')}
+                {renderColorRulePicker('方塊背景規則','backgroundColorRule')}
+                {renderColorRulePicker('邊框規則','borderColorRule')}
 
                 {deepCell.content.kind === 'text' ? (
                   <>
@@ -1747,6 +1720,30 @@ export default function Frame360EditorModal({
                       }
                       style={styles.deepInput}
                     />
+                  </>
+                ) : null}
+
+                {deepCell.content.kind === 'image' ? (
+                  <>
+                    <Text style={styles.sectionTitle}>圖片內容編輯</Text>
+                    <View style={styles.choiceWrap}>
+                      <Pressable disabled={editorLocked} onPress={()=>void pickImageForDeepCell('content')} style={[styles.choice,editorLocked&&styles.disabled]}><Text style={styles.choiceText}>🖼 從相簿選擇</Text></Pressable>
+                      <Pressable disabled={editorLocked||!deepCell.content.uri} onPress={()=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,uri:undefined}:c.content}))} style={[styles.choice,(!deepCell.content.uri||editorLocked)&&styles.disabled]}><Text style={styles.choiceText}>移除圖片</Text></Pressable>
+                    </View>
+                    <TextInput editable={!editorLocked} value={deepCell.content.uri??''} onChangeText={uri=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,uri}:c.content}))} placeholder="圖片 URI" style={styles.deepInput}/>
+                    <Text style={styles.deepLabel}>圖片顯示模式</Text>
+                    <View style={styles.choiceWrap}>
+                      {([['cover','填滿'],['contain','完整'],['stretch','拉伸'],['repeat','平鋪'],['original','原尺寸']] as const).map(([fit,label])=><Pressable key={fit} disabled={editorLocked} onPress={()=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,fit}:c.content}))} style={[styles.choice,(deepCell.content.fit??'cover')===fit&&styles.choiceActive,editorLocked&&styles.disabled]}><Text style={styles.choiceText}>{label}</Text></Pressable>)}
+                    </View>
+                    <View style={styles.sizeRow}>
+                      <View style={styles.sizeField}><Text style={styles.deepLabel}>透明度 %</Text><TextInput editable={!editorLocked} keyboardType="decimal-pad" value={String(deepCell.content.opacity??100)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,opacity:Math.max(0,Math.min(100,Number(v)||0))}:c.content}))} style={styles.deepInput}/></View>
+                      <View style={styles.sizeField}><Text style={styles.deepLabel}>縮放</Text><TextInput editable={!editorLocked} keyboardType="decimal-pad" value={String(deepCell.content.scale??1)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,scale:Math.max(.1,Math.min(8,Number(v)||1))}:c.content}))} style={styles.deepInput}/></View>
+                    </View>
+                    <View style={styles.sizeRow}>
+                      <View style={styles.sizeField}><Text style={styles.deepLabel}>X 位移 px</Text><TextInput editable={!editorLocked} keyboardType="numbers-and-punctuation" value={String(deepCell.content.x??0)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,x:Math.max(-1000,Math.min(1000,Number(v)||0))}:c.content}))} style={styles.deepInput}/></View>
+                      <View style={styles.sizeField}><Text style={styles.deepLabel}>Y 位移 px</Text><TextInput editable={!editorLocked} keyboardType="numbers-and-punctuation" value={String(deepCell.content.y??0)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,y:Math.max(-1000,Math.min(1000,Number(v)||0))}:c.content}))} style={styles.deepInput}/></View>
+                    </View>
+                    <Text style={styles.deepLabel}>旋轉角度</Text><TextInput editable={!editorLocked} keyboardType="numbers-and-punctuation" value={String(deepCell.content.rotation??0)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,rotation:Math.max(-360,Math.min(360,Number(v)||0))}:c.content}))} style={styles.deepInput}/>
                   </>
                 ) : null}
 

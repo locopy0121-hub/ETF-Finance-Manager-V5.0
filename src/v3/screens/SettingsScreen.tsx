@@ -1159,14 +1159,7 @@ export function SettingsScreen({
   accountingResetLabel = '清除全部帳務資料',
   accountingResetFailSafe = '清除前會建立完整安全備份；備份失敗即停止清除。',
 }: SettingsScreenProps) {
-  const [openGroups, setOpenGroups] = useState<Record<ToolboxGroup, boolean>>({
-    layout: true,
-    monitor: false,
-    visual: false,
-    system: false,
-    data: false,
-    safety: false,
-  });
+  const [openGroup, setOpenGroup] = useState<ToolboxGroup | null>('layout');
   const [monitorTarget, setMonitorTarget] =
     useState<'appBoard' | 'floating' | 'widget'>('floating');
   const [safetyBackups, setSafetyBackups] = useState<SafetyBackup[]>([]);
@@ -1175,7 +1168,7 @@ export function SettingsScreen({
   );
 
   useEffect(() => {
-    if (!openGroups.data && !openGroups.safety) return;
+    if (openGroup !== 'data' && openGroup !== 'safety') return;
     let active = true;
     void listSafetyBackups().then(rows => {
       if (active) setSafetyBackups(rows);
@@ -1183,7 +1176,7 @@ export function SettingsScreen({
     return () => {
       active = false;
     };
-  }, [openGroups.data, openGroups.safety]);
+  }, [openGroup]);
 
   const isEditModeActive = prefs.globalEditMode;
   const monitor = prefs.monitoring[monitorTarget];
@@ -1312,14 +1305,11 @@ export function SettingsScreen({
             icon={group.icon}
             title={group.title}
             subtitle={group.subtitle}
-            open={openGroups[group.key]}
-            onPress={() =>
-              setOpenGroups(current => ({
-                ...current,
-                [group.key]: !current[group.key],
-              }))
-            }
+            open={openGroup === group.key}
+            onPress={() => setOpenGroup(current => (current === group.key ? null : group.key))}
           >
+            {openGroup === group.key ? (
+              <>
             {group.key === 'layout' ? (
               <>
                 <Text style={styles.groupTitle}>全局顯示控制</Text>
@@ -2087,6 +2077,8 @@ export function SettingsScreen({
                     </Text>
                   </Pressable>
                 </View>
+              </>
+            ) : null}
               </>
             ) : null}
           </AccordionCard>

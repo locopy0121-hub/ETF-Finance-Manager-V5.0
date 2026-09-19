@@ -199,7 +199,7 @@ export function PortfolioScreen({
     common.prefs.frame360Templates?.['portfolio:portfolio-list'] ??
     createPortfolioHoldingFrame360Template();
   const portfolioEditMode =
-    common.prefs.globalEditMode ||
+    common.prefs.globalEditMode &&
     Boolean(common.prefs.monitoring?.pageCustomize?.portfolio);
   const now = new Date();
   const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -211,7 +211,6 @@ export function PortfolioScreen({
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <PageFrame prefs={common.prefs} page="portfolio" cardId="portfolio-header">
       <PageFrame prefs={common.prefs} page="portfolio" cardId="portfolio-header">
       <View style={styles.header}>
         <View style={styles.headerText}>
@@ -237,7 +236,6 @@ export function PortfolioScreen({
           <Text style={styles.addButtonText}>+ 新增</Text>
         </Pressable>
       </View>
-      </PageFrame>
       </PageFrame>
 
       <PageFrameStack prefs={common.prefs} page="portfolio">

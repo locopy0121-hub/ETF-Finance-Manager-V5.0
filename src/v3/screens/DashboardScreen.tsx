@@ -258,7 +258,6 @@ export function DashboardScreen({
       showsVerticalScrollIndicator={false}
     >
       <PageFrame prefs={prefs} page="dashboard" cardId="dashboard-header">
-      <PageFrame prefs={prefs} page="dashboard" cardId="dashboard-header">
       <View style={styles.welcomeRow}>
         <View style={styles.welcome}>
           <Text style={styles.eyebrow}>ETF 財務管家</Text>
@@ -278,7 +277,6 @@ export function DashboardScreen({
           </Pressable>
         </View>
       </View>
-      </PageFrame>
       </PageFrame>
 
       <PageFrameStack prefs={prefs} page="dashboard">

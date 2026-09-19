@@ -1,4 +1,4 @@
-name: V5.0.5 Continuous Verification
+name: V5.0.6 Continuous Verification
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   verify:
-    name: Verify V5.0.5 source
+    name: Verify V5.0.6 source
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -43,17 +43,17 @@ jobs:
       - name: Global 360 zero-legacy hard-gate
         run: npm run audit:360-core
 
-      - name: Verify V5.0.5 version chain
+      - name: Verify V5.0.6 version chain
         shell: bash
         run: |
           set -euo pipefail
-          grep -F '"version": "5.0.5"' package.json
-          grep -F '"version": "5.0.5"' app.json
-          grep -F '"runtimeVersion": "5.0.5"' app.json
-          grep -F "APP_SEMVER='5.0.5'" src/v3/version.ts
-          grep -F 'versionName "5.0.5"' android/app/build.gradle
-          grep -F 'ETF財務管家 V5.0.5 NATIVE' android/app/src/main/res/values/strings.xml
-          grep -F 'V5.0.5 Global 360 Editor Update：Settings 僅保留 360 總開關，各頁由總開關統一控制，背景層與文字背景分離並支援圖片背景。' README.md
+          grep -F '"version": "5.0.6"' package.json
+          grep -F '"version": "5.0.6"' app.json
+          grep -F '"runtimeVersion": "5.0.6"' app.json
+          grep -F "APP_SEMVER='5.0.6'" src/v3/version.ts
+          grep -F 'versionName "5.0.6"' android/app/build.gradle
+          grep -F 'ETF財務管家 V5.0.6 NATIVE' android/app/src/main/res/values/strings.xml
+          grep -F 'V5.0.6 360 Editor Stability Update：Settings 下拉改為單一展開＋延遲掛載；360 總開關作為總權限、各頁設定模式作為頁面權限；修正 Modern Screen 重複 PageFrame 攔截層；背景與文字背景規則完全分離，背景／圖片支援相簿選取、縮放、位移、旋轉、透明度與顯示模式。' README.md
 
       - name: Source diff integrity
         run: git diff --check

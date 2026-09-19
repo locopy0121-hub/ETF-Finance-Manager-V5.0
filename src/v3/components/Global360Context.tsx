@@ -26,6 +26,8 @@ type ActiveEdit = {
 
 type Global360ContextValue = {
   enabled: boolean;
+  isPageEditEnabled: (page: PageFieldKey) => boolean;
+  togglePageEdit: (page: PageFieldKey) => void;
   canEditPage: (page: PageFieldKey) => boolean;
   openFrame: (
     page: PageFieldKey,
@@ -41,6 +43,8 @@ type Global360ContextValue = {
 
 const Global360Context = createContext<Global360ContextValue>({
   enabled: false,
+  isPageEditEnabled: () => false,
+  togglePageEdit: () => undefined,
   canEditPage: () => false,
   openFrame: () => undefined,
   addPageFrame: () => undefined,
@@ -103,14 +107,17 @@ export function Global360Provider({
   children: React.ReactNode;
 }) {
   const [active, setActive] = useState<ActiveEdit | null>(null);
-  // V5.0.5: Settings owns the single 360 switch. Per-page "設定模式" flags are compatibility
-  // state only and must not activate the editor.
+  // V5.0.6: Settings owns the master permission; each page keeps its own 設定模式.
   const enabled = Boolean(prefs.globalEditMode);
-
-  const canEditPage = useCallback(
-    (page: PageFieldKey) => enabled && page !== 'settings',
-    [enabled],
+  const isPageEditEnabled = useCallback(
+    (page: PageFieldKey) => page !== 'settings' && Boolean(prefs.monitoring?.pageCustomize?.[page]),
+    [prefs.monitoring?.pageCustomize],
   );
+  const togglePageEdit = useCallback((page: PageFieldKey) => {
+    if (!enabled || page === 'settings') return;
+    onPreferencesChange({ monitoring: {...prefs.monitoring,pageCustomize:{...prefs.monitoring.pageCustomize,[page]:!isPageEditEnabled(page)}} });
+  }, [enabled,isPageEditEnabled,onPreferencesChange,prefs.monitoring]);
+  const canEditPage = useCallback((page: PageFieldKey) => enabled && isPageEditEnabled(page), [enabled,isPageEditEnabled]);
 
   const resolveTemplate = useCallback(
     (page: PageFieldKey, cardId: string) =>
@@ -270,6 +277,8 @@ export function Global360Provider({
   const value = useMemo(
     () => ({
       enabled,
+      isPageEditEnabled,
+      togglePageEdit,
       canEditPage,
       openFrame,
       addPageFrame,
@@ -279,6 +288,8 @@ export function Global360Provider({
     }),
     [
       enabled,
+      isPageEditEnabled,
+      togglePageEdit,
       canEditPage,
       openFrame,
       addPageFrame,

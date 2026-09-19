@@ -113,6 +113,7 @@ export type Frame360CellStyle = {
   backgroundImageScale?: number;
   backgroundImageX?: number;
   backgroundImageY?: number;
+  backgroundImageRotation?: number;
   backgroundOverlayColor?: string;
   backgroundOverlayOpacity?: number;
 };
