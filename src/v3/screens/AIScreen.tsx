@@ -13,7 +13,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { researchEtf } from '../../services/aiResearch';
 import { fetchTwseDividend } from '../../services/twseDividends';
 import type { ScreenCommon } from '../screensBase';
-import { PageFrame } from '../pageRuntime';
+import { PageAddedFrames, PageFrame } from '../pageRuntime';
 import FontScaleScope from '../components/FontScaleScope';
 
 type SourceLink = { label: string; url?: string };
@@ -280,6 +280,7 @@ export function AIScreen({ common, onSettings }: AIScreenProps) {
         </Pressable>
       </View>
       </PageFrame>
+      <PageAddedFrames prefs={common.prefs} page="ai" />
     </View>
     </FontScaleScope>
   );
