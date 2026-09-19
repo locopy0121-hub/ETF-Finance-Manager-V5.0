@@ -267,10 +267,17 @@ export default function Frame360EditorModal({
     if (!draft) return {};
     return Object.fromEntries(
       draft.grid.dataCells
-        .filter(cell => cell.content.kind === 'data' && cell.previewValue !== undefined)
+        .filter(
+          cell =>
+            (cell.content.kind === 'data' || cell.content.kind === 'chart') &&
+            cell.previewValue !== undefined,
+        )
         .map(cell => {
-          const content = cell.content.kind === 'data' ? cell.content : null;
-          return [content?.binding ?? '', cell.previewValue];
+          const binding =
+            cell.content.kind === 'data' || cell.content.kind === 'chart'
+              ? cell.content.binding
+              : '';
+          return [binding, cell.previewValue];
         })
         .filter(([key]) => Boolean(key)),
     );
