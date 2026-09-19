@@ -163,6 +163,7 @@ function EditableBlock({
 }: EditableBlockProps) {
   const lastDrag = useRef({ x: 0, y: 0 });
   const lastResize = useRef({ x: 0, y: 0 });
+  const suppressNextPress = useRef(false);
   const pan = useMemo(
     () =>
       PanResponder.create({
@@ -175,10 +176,14 @@ function EditableBlock({
         },
         onPanResponderMove: (_event, gesture) => {
           if (locked) return;
+          suppressNextPress.current = true;
           const dx = gesture.dx - lastDrag.current.x;
           const dy = gesture.dy - lastDrag.current.y;
           lastDrag.current = { x: gesture.dx, y: gesture.dy };
           onDrag(dx, dy);
+        },
+        onPanResponderTerminate: () => {
+          suppressNextPress.current = true;
         },
         onPanResponderTerminationRequest: () => false,
         onShouldBlockNativeResponder: () => true,
@@ -212,8 +217,17 @@ function EditableBlock({
     <Pressable
       {...pan.panHandlers}
       disabled={locked}
-      onPress={onPress}
-      onLongPress={onLongPress}
+      onPress={() => {
+        if (suppressNextPress.current) {
+          suppressNextPress.current = false;
+          return;
+        }
+        onPress();
+      }}
+      onLongPress={() => {
+        suppressNextPress.current = true;
+        onLongPress();
+      }}
       delayLongPress={380}
       style={[styles.cell, style, active && styles.cellActive]}
     >
