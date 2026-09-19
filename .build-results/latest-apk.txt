@@ -1,6 +1,6 @@
-status=cancelled
-run_id=35439431089
-source_commit=626608f248627341bd24248dc344a72dbc9388fb
+status=failure
+run_id=35439467489
+source_commit=4055c82afbcf08605c943f4f6b05a35dbc3a642f
 artifact_name=ETF-Finance-Manager-V5.0.3-Global360-ARM64
 versionName=5.0.3
 versionCode=50003
