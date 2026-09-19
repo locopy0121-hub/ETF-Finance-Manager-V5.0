@@ -157,7 +157,7 @@ export type Frame360Grid = {
   /** Workspace guide columns. They no longer imply content cells. */
   columns: number;
   baseCells: Frame360BaseCell[];
-  /** Visual Blocks only. Empty legacy storage cells are removed by migration. */
+  /** Visual Blocks only. Empty previous storage cells are removed by migration. */
   dataCells: Frame360Block[];
 };
 
@@ -241,21 +241,21 @@ function createBaseCells(rows: number, columns: number): Frame360BaseCell[] {
   return baseCells;
 }
 
-function legacyCellToFreeLayout(
+function storedCellToFreeLayout(
   cell: Frame360DataCell,
   rows: number,
   columns: number,
 ): Frame360BlockLayout {
   const existing = cell.layout ?? {};
-  const legacy = existing.mode !== 'free';
+  const needsInset = existing.mode !== 'free';
   const baseX = ((cell.columnStart - 1) / Math.max(1, columns)) * 100;
   const baseY = ((cell.rowStart - 1) / Math.max(1, rows)) * 100;
   const baseWidth = (cell.columnSpan / Math.max(1, columns)) * 100;
   const baseHeight = (cell.rowSpan / Math.max(1, rows)) * 100;
   // A small inset makes migrated Blocks visibly independent instead of
   // reproducing the old edge-to-edge spreadsheet look.
-  const gapX = legacy ? Math.min(0.8, baseWidth * 0.08) : 0;
-  const gapY = legacy ? Math.min(0.8, baseHeight * 0.08) : 0;
+  const gapX = needsInset ? Math.min(0.8, baseWidth * 0.08) : 0;
+  const gapY = needsInset ? Math.min(0.8, baseHeight * 0.08) : 0;
   const width = existing.width ?? Math.max(4, baseWidth - gapX * 2);
   const height = existing.height ?? Math.max(4, baseHeight - gapY * 2);
   return {
@@ -276,7 +276,7 @@ function legacyCellToFreeLayout(
 }
 
 /**
- * Converts legacy 1-1 / 1-2 storage cells into independent free Blocks.
+ * Converts previous 1-1 / 1-2 storage cells into independent free Blocks.
  * Empty cells are intentionally discarded; the grid remains only as a guide.
  * This function is idempotent and safe to run whenever a frame is opened.
  */
@@ -289,7 +289,7 @@ export function migrateFrame360CellsToBlocks(
     .filter(cell => cell.content.kind !== 'empty' || Boolean(cell.targetNodeId))
     .map(cell => ({
       ...cell,
-      layout: legacyCellToFreeLayout(cell, rows, columns),
+      layout: storedCellToFreeLayout(cell, rows, columns),
     }));
 
   return {
