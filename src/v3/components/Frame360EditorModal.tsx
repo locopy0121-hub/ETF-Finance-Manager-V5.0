@@ -25,6 +25,7 @@ import {
   type Frame360Template,
 } from '../frame360';
 import Frame360Runtime from './Frame360Runtime';
+import ColorPalettePicker from '../../components/ColorPalettePicker';
 import {
   FRAME360_CELL_TYPES,
   FRAME360_COMPONENTS,
@@ -69,10 +70,6 @@ function hslToHex(h: number, s: number, l: number) {
     .join('')
     .toUpperCase();
 }
-
-const FULL_COLOR_PALETTE = Array.from({ length: 12 }, (_, hueIndex) =>
-  [28, 40, 52, 64, 76, 88].map(light => hslToHex(hueIndex * 30, 82, light)),
-).flat();
 
 const DATA_SOURCE_GROUPS = [
   { group: '基本資料', items: [
@@ -216,6 +213,26 @@ export default function Frame360EditorModal({
   const [deepSnapshot, setDeepSnapshot] = useState<Frame360DataCell | null>(null);
   const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
   const [numericDraft, setNumericDraft] = useState({ x: '', y: '', width: '', height: '' });
+  const [deepPreviewPos, setDeepPreviewPos] = useState({ x: 0, y: 0 });
+  const deepPreviewLast = useRef({ x: 0, y: 0 });
+  const deepPreviewPan = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: (_event, gesture) =>
+          Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2,
+        onPanResponderGrant: () => {
+          deepPreviewLast.current = { x: 0, y: 0 };
+        },
+        onPanResponderMove: (_event, gesture) => {
+          const dx = gesture.dx - deepPreviewLast.current.x;
+          const dy = gesture.dy - deepPreviewLast.current.y;
+          deepPreviewLast.current = { x: gesture.dx, y: gesture.dy };
+          setDeepPreviewPos(current => ({ x: current.x + dx, y: current.y + dy }));
+        },
+      }),
+    [],
+  );
 
   useEffect(() => {
     if (!visible || !template) return;
@@ -458,41 +475,18 @@ export default function Frame360EditorModal({
           />
         ))}
       </View>
-      <Text style={styles.previewHint}>完整色盤</Text>
-      <View style={styles.colorPickerGrid}>
-        {FULL_COLOR_PALETTE.map((color, index) => (
-          <Pressable
-            key={`${field}-palette-${index}`}
-            accessibilityLabel={color}
-            onPress={() =>
-              deepCell &&
-              !editorLocked &&
-              replaceCell(deepCell.id, cell => ({
-                ...cell,
-                style: { ...cell.style, [field]: color },
-              }))
-            }
-            style={[
-              styles.colorPickerSwatch,
-              { backgroundColor: color },
-              deepCell?.style[field] === color && styles.colorSwatchActive,
-            ]}
-          />
-        ))}
-      </View>
-      <TextInput
-        editable={!editorLocked}
-        autoCapitalize="characters"
-        value={(deepCell?.style[field] as string | undefined) ?? ''}
-        onChangeText={value =>
+      <ColorPalettePicker
+        label="色盤"
+        value={(deepCell?.style[field] as string | undefined) ?? '#FFFFFF'}
+        allowTheme={false}
+        onChange={value =>
           deepCell &&
+          !editorLocked &&
           replaceCell(deepCell.id, cell => ({
             ...cell,
             style: { ...cell.style, [field]: value },
           }))
         }
-        placeholder="#RRGGBB / transparent"
-        style={styles.deepInput}
       />
     </>
   );
@@ -806,6 +800,7 @@ export default function Frame360EditorModal({
       width: String(Math.round((layout.width / 100) * Math.max(1, draft?.canvas.width ?? 360))),
       height: String(Math.round((layout.height / 100) * Math.max(1, draft?.canvas.height ?? 500))),
     });
+    setDeepPreviewPos({ x: 0, y: 0 });
     setDeepDialog(true);
   };
 
@@ -1136,6 +1131,32 @@ export default function Frame360EditorModal({
 
       <Modal visible={deepDialog} transparent animationType="slide" onRequestClose={() => restoreDeepSnapshot(true)}>
         <View style={styles.backdrop}>
+          {deepCell ? (
+            <View
+              {...deepPreviewPan.panHandlers}
+              style={[
+                styles.deepFloatingPreview,
+                { transform: [{ translateX: deepPreviewPos.x }, { translateY: deepPreviewPos.y }] },
+              ]}
+            >
+              <Text style={styles.previewTitle}>☰ 方塊即時預覽</Text>
+              <Text style={styles.previewHint}>拖曳只移動預覽窗，不改變方塊座標</Text>
+              <View style={{ marginTop: 8, minHeight: 96 }}>
+                <Frame360Runtime
+                  template={{ ...draft, blocks: [deepCell] }}
+                  data={previewData}
+                  reminderContext={{
+                    today: previewToday,
+                    dividendDate: previewToday,
+                    exDividendDate: previewToday,
+                    lastBuyDate: previewToday,
+                    payDate: previewToday,
+                  }}
+                  minHeight={96}
+                />
+              </View>
+            </View>
+          ) : null}
           <View
             style={[
               styles.deepSheet,
@@ -1930,65 +1951,9 @@ export default function Frame360EditorModal({
                       ))}
                     </View>
 
-                    <Text style={styles.deepLabel}>顏色規則</Text>
-                    <View style={styles.choiceWrap}>
-                      {([
-                        ['auto', '自動'],
-                        ['fixed', '固定'],
-                        ['pnl', '損益正負'],
-                        ['market', '市場狀態'],
-                      ] as const).map(([colorRule, label]) => (
-                        <Pressable
-                          key={colorRule}
-                          onPress={() =>
-                            replaceCell(deepCell.id, cell => ({
-                              ...cell,
-                              content:
-                                cell.content.kind === 'data'
-                                  ? { ...cell.content, colorRule }
-                                  : cell.content,
-                            }))
-                          }
-                          style={[
-                            styles.choice,
-                            (deepCell.content.kind === 'data' ? deepCell.content.colorRule ?? 'auto' : 'auto') === colorRule && styles.choiceActive,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.choiceText,
-                              (deepCell.content.kind === 'data' ? deepCell.content.colorRule ?? 'auto' : 'auto') === colorRule && styles.choiceTextActive,
-                            ]}
-                          >
-                            {label}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
                   </>
                 ) : null}
 
-                <View style={styles.deepPreviewBox}>
-                  <Text style={styles.previewTitle}>此方塊即時預覽</Text>
-                  <Text style={styles.previewHint}>直接使用目前編輯位置捕捉到的資料，不產生 Demo 數值。</Text>
-                  <View style={{ marginTop: 8, minHeight: 110 }}>
-                    <Frame360Runtime
-                      template={{
-                        ...draft,
-                        blocks: [deepCell],
-                      }}
-                      data={previewData}
-                      reminderContext={{
-                        today: previewToday,
-                        dividendDate: previewToday,
-                        exDividendDate: previewToday,
-                        lastBuyDate: previewToday,
-                        payDate: previewToday,
-                      }}
-                      minHeight={110}
-                    />
-                  </View>
-                </View>
               </ScrollView>
             ) : null}
 
@@ -2249,6 +2214,23 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontSize: 12,
     fontWeight: '800',
+  },
+  deepFloatingPreview: {
+    position: 'absolute',
+    right: 12,
+    top: 72,
+    width: 220,
+    minHeight: 130,
+    zIndex: 50,
+    elevation: 20,
+    borderWidth: 1.5,
+    borderColor: '#93C5FD',
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    padding: 10,
+    shadowColor: '#000000',
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
   },
   deepPreviewBox: {
     borderRadius: 14,
