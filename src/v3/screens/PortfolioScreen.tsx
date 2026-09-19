@@ -14,6 +14,7 @@ import { V3_THEME, resolvePnlTone } from '../theme';
 import { PageFrame, PageFrameStack, pageFieldEnabled } from '../pageRuntime';
 import FontScaleScope from '../components/FontScaleScope';
 import Frame360Runtime from '../components/Frame360Runtime';
+import Frame360EditorModal from '../components/Frame360EditorModal';
 import { createPortfolioHoldingFrame360Template } from '../frame360Defaults';
 import type { ScreenCommon } from '../screensBase';
 
@@ -120,6 +121,7 @@ export function PortfolioScreen({
   onManageHolding,
 }: PortfolioScreenProps) {
   const [tab, setTab] = useState<PortfolioTab>('all');
+  const [editingHoldingFrame, setEditingHoldingFrame] = useState(false);
 
   const portfolio = useMemo(
     () =>
@@ -196,6 +198,9 @@ export function PortfolioScreen({
   const holdingFrameTemplate =
     common.prefs.frame360Templates?.['portfolio:portfolio-list'] ??
     createPortfolioHoldingFrame360Template();
+  const portfolioEditMode =
+    common.prefs.globalEditMode ||
+    Boolean(common.prefs.monitoring?.pageCustomize?.portfolio);
   const now = new Date();
   const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
@@ -290,7 +295,9 @@ export function PortfolioScreen({
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>持股清單</Text>
-        <Text style={styles.sectionMeta}>{filteredRows.length} 檔 · 長按可管理</Text>
+        <Text style={styles.sectionMeta}>
+          {filteredRows.length} 檔 · {portfolioEditMode ? '編輯模式：長按進入 360' : '長按可管理'}
+        </Text>
       </View>
 
       <View style={styles.list}>
@@ -299,9 +306,22 @@ export function PortfolioScreen({
           return (
             <Pressable
               key={row.symbol}
-              onPress={() => onOpenHolding?.(row.symbol)}
-              onLongPress={() => onManageHolding?.(row.symbol)}
-              delayLongPress={420}
+              onPress={() => {
+                if (!portfolioEditMode) onOpenHolding?.(row.symbol);
+              }}
+              onLongPress={() => {
+                if (portfolioEditMode) {
+                  setEditingHoldingFrame(true);
+                  return;
+                }
+                onManageHolding?.(row.symbol);
+              }}
+              delayLongPress={380}
+              accessibilityHint={
+                portfolioEditMode
+                  ? '長按進入持股框架 360 編輯器'
+                  : '長按修改庫存'
+              }
               style={styles.holdingCard}
             >
               <Frame360Runtime
@@ -369,6 +389,21 @@ export function PortfolioScreen({
       </PageFrame>
       </PageFrameStack>
     </ScrollView>
+
+    <Frame360EditorModal
+      visible={editingHoldingFrame}
+      template={holdingFrameTemplate}
+      onClose={() => setEditingHoldingFrame(false)}
+      onSave={template => {
+        common.onPreferencesChange?.({
+          frame360Templates: {
+            ...(common.prefs.frame360Templates ?? {}),
+            [template.id]: template,
+          },
+        });
+        setEditingHoldingFrame(false);
+      }}
+    />
     </FontScaleScope>
   );
 }
