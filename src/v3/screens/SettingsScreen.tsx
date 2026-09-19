@@ -944,7 +944,7 @@ const TOOLBOX_GROUPS: Array<{
   title: string;
   subtitle: string;
 }> = [
-  { key: 'layout', icon: '🖥️', title: '全局版面修改編輯', subtitle: 'Layout · 頁面卡片順序 · 組件顯示' },
+  { key: 'layout', icon: '🖥️', title: '顯示與頁面設定', subtitle: '顯示開關 · 各頁面設定模式' },
   { key: 'monitor', icon: '📹', title: '監視器與觀察清單', subtitle: 'Monitor · Watchlist · 警報與刷新' },
   { key: 'visual', icon: '🎨', title: '視覺與主題', subtitle: '主題 · 卡片 · 圖表 · Widget' },
   { key: 'system', icon: '🤖', title: '系統與 AI', subtitle: 'AI · 通知 · 行情更新 · OTA' },
@@ -1167,9 +1167,6 @@ export function SettingsScreen({
     data: false,
     safety: false,
   });
-  const [selectedPage, setSelectedPage] = useState<PageFieldKey>('dashboard');
-  const [editingCardId, setEditingCardId] = useState<string | null>(null);
-  const [editing360TemplateId, setEditing360TemplateId] = useState<string | null>(null);
   const [monitorTarget, setMonitorTarget] =
     useState<'appBoard' | 'floating' | 'widget'>('floating');
   const [safetyBackups, setSafetyBackups] = useState<SafetyBackup[]>([]);
@@ -1189,14 +1186,6 @@ export function SettingsScreen({
   }, [openGroups.data, openGroups.safety]);
 
   const isEditModeActive = prefs.globalEditMode;
-  const pageLayout = prefs.pageLayouts[selectedPage];
-  const pageCards = pageLayout?.cards ?? [];
-  const editingCard =
-    pageCards.find(card => card.id === editingCardId) ?? null;
-  const frame360Templates = prefs.frame360Templates ?? {};
-  const editing360Template = editing360TemplateId
-    ? frame360Templates[editing360TemplateId] ?? null
-    : null;
   const monitor = prefs.monitoring[monitorTarget];
   const gridMonitor = prefs.monitoring.gridMonitor;
   const selectedBroker =
@@ -1257,98 +1246,6 @@ export function SettingsScreen({
         ? monitor.selectedSymbols.filter(item => item !== symbol)
         : [...monitor.selectedSymbols, symbol],
     });
-  };
-
-  const moveCard = (index: number, by: number) => {
-    if (!pageLayout) return;
-    const to = clamp(index + by, 0, pageCards.length - 1);
-    if (to === index) return;
-    const cards = [...pageCards];
-    const [item] = cards.splice(index, 1);
-    cards.splice(to, 0, item);
-    onChange({
-      pageLayouts: {
-        ...prefs.pageLayouts,
-        [selectedPage]: {
-          ...pageLayout,
-          cards,
-        },
-      },
-    });
-  };
-
-  const toggleCardHidden = (id: string) => {
-    if (!pageLayout) return;
-    onChange({
-      pageLayouts: {
-        ...prefs.pageLayouts,
-        [selectedPage]: {
-          ...pageLayout,
-          cards: pageCards.map(card =>
-            card.id === id ? { ...card, hidden: !card.hidden } : card,
-          ),
-        },
-      },
-    });
-  };
-
-  const open360Frame = (card: V3PageCard) => {
-    const templateId = `${selectedPage}:${card.id}`;
-    const existing = frame360Templates[templateId];
-    const template =
-      existing ??
-      (templateId === 'portfolio:portfolio-list'
-        ? createPortfolioHoldingFrame360Template()
-        : createFrame360Template({
-            id: templateId,
-            surface: selectedPage,
-            templateKey:
-              card.role === 'listTemplate'
-                ? 'shared-list-template'
-                : card.id,
-            name: card.title,
-            rows: 2,
-            columns: 5,
-          }));
-
-    if (!existing) {
-      onChange({
-        frame360Templates: {
-          ...frame360Templates,
-          [templateId]: template,
-        },
-      });
-    }
-    setEditing360TemplateId(templateId);
-  };
-
-  const save360Frame = (template: Frame360Template) => {
-    onChange({
-      frame360Templates: {
-        ...frame360Templates,
-        [template.id]: template,
-      },
-    });
-    setEditing360TemplateId(null);
-  };
-
-  const saveFrame = (
-    nextCard: V3PageCard,
-    _draft: PageFrameEditorDraft,
-  ) => {
-    if (!pageLayout) return;
-    onChange({
-      pageLayouts: {
-        ...prefs.pageLayouts,
-        [selectedPage]: {
-          ...pageLayout,
-          cards: pageCards.map(card =>
-            card.id === nextCard.id ? nextCard : card,
-          ),
-        },
-      },
-    });
-    setEditingCardId(null);
   };
 
   const patchBroker = (patch: Partial<BrokerProfile>) => {
@@ -1506,58 +1403,6 @@ export function SettingsScreen({
                   ))}
                 </View>
 
-                <Text style={styles.groupTitle}>Page Layout / 卡片順序</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.pageSelector}
-                >
-                  {PAGE_REGISTRY.map(({ key, label }) => (
-                    <ChoicePill
-                      key={key}
-                      active={selectedPage === key}
-                      label={label}
-                      onPress={() => setSelectedPage(key)}
-                    />
-                  ))}
-                </ScrollView>
-
-                <View style={styles.cardList}>
-                  {pageCards.map((card, index) => (
-                    <View key={card.id} style={styles.frameCard}>
-                      <View style={styles.frameCardInfo}>
-                        <Text style={styles.frameCardTitle}>{card.title}</Text>
-                        <Text style={styles.frameCardMeta}>
-                          {index + 1} · {card.kind} · {card.fields.length} 欄位 · {card.hidden ? '隱藏' : '顯示'}
-                        </Text>
-                      </View>
-                      <SmallAction
-                        label="↑"
-                        onPress={() => moveCard(index, -1)}
-                      />
-                      <SmallAction
-                        label="↓"
-                        onPress={() => moveCard(index, 1)}
-                      />
-                      {selectedPage === 'settings' ? (
-                        <Text style={styles.fixedFrameText}>固定顯示</Text>
-                      ) : (
-                        <SmallAction
-                          label={card.hidden ? '顯示' : '隱藏'}
-                          onPress={() => toggleCardHidden(card.id)}
-                        />
-                      )}
-                      {card.role !== 'module' ? (
-                        <Pressable
-                          onPress={() => open360Frame(card)}
-                          style={styles.gearButton}
-                        >
-                          <Text style={styles.gearText}>360</Text>
-                        </Pressable>
-                      ) : null}
-                    </View>
-                  ))}
-                </View>
               </>
             ) : null}
 
@@ -2274,12 +2119,6 @@ export function SettingsScreen({
       </View>
       </PageFrame>
 
-      <Frame360EditorModal
-        visible={!!editing360Template}
-        template={editing360Template}
-        onClose={() => setEditing360TemplateId(null)}
-        onSave={save360Frame}
-      />
 
     </ScrollView>
     </FontScaleScope>
