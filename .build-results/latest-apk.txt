@@ -1,6 +1,6 @@
-status=success
-run_id=35445971138
-source_commit=3301b0770ba41717b5daa23eee531a8ee693f6b8
-artifact_name=ETF-Finance-Manager-V5.0.5-Global360-ARM64
-versionName=5.0.5
-versionCode=50005
+status=failure
+run_id=35447311699
+source_commit=56f230b31e820652a1322ff6f68252666d065023
+artifact_name=ETF-Finance-Manager-V5.0.6-Global360-ARM64
+versionName=5.0.6
+versionCode=50006
