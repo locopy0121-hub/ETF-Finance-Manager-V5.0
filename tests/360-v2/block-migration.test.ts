@@ -25,7 +25,7 @@ describe('V5.0.4 360 block migration', () => {
     expect(migrated.grid.dataCells.length).toBe(2);
     expect(migrated.grid.dataCells.every(block => block.layout?.mode === 'free')).toBe(true);
     expect(migrated.grid.dataCells.every(block => block.content.kind !== 'empty')).toBe(true);
-    expect(migrated.grid.dataCells[0].layout?.width).toBeLessThan(100 / 3);
+    expect((migrated.grid.dataCells[0].layout?.width ?? 100) < 100 / 3).toBe(true);
   });
 
   it('resizes only the active workspace and preserves blocks', () => {
