@@ -102,6 +102,9 @@ jobs:
       - name: 360 V2 transaction hard-gate
         run: npm run test:360
 
+      - name: 360 runtime / zero-legacy hard-gate
+        run: npm run audit:360-core
+
       - name: Source diff integrity
         run: git diff --check
 
