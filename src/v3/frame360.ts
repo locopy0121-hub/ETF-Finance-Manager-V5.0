@@ -110,6 +110,8 @@ export type Frame360BaseCell = {
 
 export type Frame360DataCell = {
   id: string;
+  targetNodeId?: string;
+  nodeLabel?: string;
   rowStart: number;
   columnStart: number;
   rowSpan: number;
@@ -328,6 +330,8 @@ export function mergeFrame360Cells(
 
   const mergedCell: Frame360DataCell = {
     id: `merged-${rect.rowStart}-${rect.columnStart}-${rect.rowSpan}x${rect.columnSpan}`,
+    targetNodeId: selected[0].targetNodeId,
+    nodeLabel: selected[0].nodeLabel,
     ...rect,
     baseCellIds: expected,
     content,
