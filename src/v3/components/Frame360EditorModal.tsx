@@ -1047,13 +1047,13 @@ export default function Frame360EditorModal({
                           }
                           style={[
                             styles.choice,
-                            (deepCell.content.format ?? 'text') === format && styles.choiceActive,
+                            (deepCell.content.kind === 'data' ? deepCell.content.format ?? 'text' : 'text') === format && styles.choiceActive,
                           ]}
                         >
                           <Text
                             style={[
                               styles.choiceText,
-                              (deepCell.content.format ?? 'text') === format && styles.choiceTextActive,
+                              (deepCell.content.kind === 'data' ? deepCell.content.format ?? 'text' : 'text') === format && styles.choiceTextActive,
                             ]}
                           >
                             {label}
@@ -1083,13 +1083,13 @@ export default function Frame360EditorModal({
                           }
                           style={[
                             styles.choice,
-                            (deepCell.content.colorRule ?? 'auto') === colorRule && styles.choiceActive,
+                            (deepCell.content.kind === 'data' ? deepCell.content.colorRule ?? 'auto' : 'auto') === colorRule && styles.choiceActive,
                           ]}
                         >
                           <Text
                             style={[
                               styles.choiceText,
-                              (deepCell.content.colorRule ?? 'auto') === colorRule && styles.choiceTextActive,
+                              (deepCell.content.kind === 'data' ? deepCell.content.colorRule ?? 'auto' : 'auto') === colorRule && styles.choiceTextActive,
                             ]}
                           >
                             {label}
