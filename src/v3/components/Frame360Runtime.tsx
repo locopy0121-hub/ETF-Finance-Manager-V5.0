@@ -458,7 +458,7 @@ export default function Frame360Runtime({
 }: Props) {
   const rowHeight = minHeight / template.grid.rows;
   const cells = useMemo(
-    () => template.grid.dataCells
+    () => template.blocks
       .filter(cell => cell.content.kind !== 'empty' || Boolean(cell.targetNodeId))
       .slice()
       .sort((a, b) => {
