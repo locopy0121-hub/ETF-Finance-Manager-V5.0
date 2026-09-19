@@ -1,6 +1,6 @@
 {
   "name": "etf-finance-manager",
-  "version": "5.0.9",
+  "version": "5.0.10",
   "private": true,
   "main": "index.ts",
   "scripts": {
