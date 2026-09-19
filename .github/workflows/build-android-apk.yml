@@ -99,6 +99,9 @@ jobs:
       - name: TypeScript strict check
         run: npm run typecheck
 
+      - name: 360 V2 transaction hard-gate
+        run: npm run test:360
+
       - name: Source diff integrity
         run: git diff --check
 
