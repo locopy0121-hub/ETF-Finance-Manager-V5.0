@@ -20,6 +20,7 @@ import {
   type Frame360DataCell,
   type Frame360Template,
 } from '../frame360';
+import Frame360Runtime from './Frame360Runtime';
 import {
   FRAME360_CELL_TYPES,
   FRAME360_COMPONENTS,
@@ -93,6 +94,24 @@ export default function Frame360EditorModal({
     () => draft?.grid.dataCells.find(cell => cell.id === deepCellId) ?? null,
     [draft, deepCellId],
   );
+
+  const previewData = useMemo(() => {
+    if (!draft) return {};
+    return Object.fromEntries(
+      draft.grid.dataCells
+        .filter(cell => cell.content.kind === 'data')
+        .map(cell => {
+          const content = cell.content.kind === 'data' ? cell.content : null;
+          return [
+            content?.binding ?? '',
+            cell.nodeLabel ?? content?.label ?? content?.binding ?? '預覽',
+          ];
+        })
+        .filter(([key]) => Boolean(key)),
+    );
+  }, [draft]);
+
+  const previewToday = '2099-01-01';
 
   const replaceCell = (
     cellId: string,
@@ -404,9 +423,18 @@ export default function Frame360EditorModal({
               <Text style={styles.previewTitle}>即時預覽框</Text>
               <Text style={styles.previewHint}>與正式格線共用同一份 Draft</Text>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {renderLockedGrid(true)}
-            </ScrollView>
+            <Frame360Runtime
+              template={draft}
+              data={previewData}
+              reminderContext={{
+                today: previewToday,
+                dividendDate: previewToday,
+                exDividendDate: previewToday,
+                lastBuyDate: previewToday,
+                payDate: previewToday,
+              }}
+              minHeight={160}
+            />
           </View>
 
           <Text style={styles.gestureHint}>
