@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 
 import {
   appendFrame360Block,
@@ -528,6 +529,29 @@ export default function Frame360EditorModal({
       />
     </>
   );
+
+  const pickBackgroundImage = async (cellId: string) => {
+    if (editorLocked) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 1,
+    });
+    if (result.canceled || !result.assets[0]?.uri) return;
+    const uri = result.assets[0].uri;
+    replaceCell(cellId, cell => ({
+      ...cell,
+      style: {
+        ...cell.style,
+        backgroundImageUri: uri,
+        backgroundImageFit: cell.style.backgroundImageFit ?? 'cover',
+        backgroundImageOpacity: cell.style.backgroundImageOpacity ?? 100,
+        backgroundImageScale: cell.style.backgroundImageScale ?? 1,
+        backgroundImageX: cell.style.backgroundImageX ?? 0,
+        backgroundImageY: cell.style.backgroundImageY ?? 0,
+      },
+    }));
+  };
 
   const renderSourcePicker = (
     cell: Frame360DataCell,
@@ -1717,6 +1741,34 @@ export default function Frame360EditorModal({
 
                 <Text style={styles.sectionTitle}>背景圖片</Text>
                 <Text style={styles.previewHint}>背景層與文字背景分離；此設定不會修改文字背景。</Text>
+                <View style={styles.choiceWrap}>
+                  <Pressable
+                    disabled={editorLocked}
+                    onPress={() => pickBackgroundImage(deepCell.id)}
+                    style={[styles.choice, editorLocked && styles.disabled]}
+                  >
+                    <Text style={styles.choiceText}>
+                      {deepCell.style.backgroundImageUri ? '更換圖片' : '選擇圖片'}
+                    </Text>
+                  </Pressable>
+                  {deepCell.style.backgroundImageUri ? (
+                    <Pressable
+                      disabled={editorLocked}
+                      onPress={() =>
+                        replaceCell(deepCell.id, cell => ({
+                          ...cell,
+                          style: {
+                            ...cell.style,
+                            backgroundImageUri: undefined,
+                          },
+                        }))
+                      }
+                      style={[styles.choice, styles.dangerChoice, editorLocked && styles.disabled]}
+                    >
+                      <Text style={styles.dangerChoiceText}>移除圖片</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
                 <TextInput
                   editable={!editorLocked}
                   value={deepCell.style.backgroundImageUri ?? ''}
@@ -1785,6 +1837,56 @@ export default function Frame360EditorModal({
                   >
                     <Text style={styles.stepButtonText}>＋</Text>
                   </Pressable>
+                </View>
+                <View style={styles.sizeRow}>
+                  <View style={styles.sizeField}>
+                    <Text style={styles.deepLabel}>圖片 X px</Text>
+                    <TextInput
+                      editable={!editorLocked}
+                      keyboardType="decimal-pad"
+                      value={String(deepCell.style.backgroundImageX ?? 0)}
+                      onChangeText={value =>
+                        replaceCell(deepCell.id, cell => ({
+                          ...cell,
+                          style: { ...cell.style, backgroundImageX: Number(value) || 0 },
+                        }))
+                      }
+                      style={styles.deepInput}
+                    />
+                  </View>
+                  <View style={styles.sizeField}>
+                    <Text style={styles.deepLabel}>圖片 Y px</Text>
+                    <TextInput
+                      editable={!editorLocked}
+                      keyboardType="decimal-pad"
+                      value={String(deepCell.style.backgroundImageY ?? 0)}
+                      onChangeText={value =>
+                        replaceCell(deepCell.id, cell => ({
+                          ...cell,
+                          style: { ...cell.style, backgroundImageY: Number(value) || 0 },
+                        }))
+                      }
+                      style={styles.deepInput}
+                    />
+                  </View>
+                  <View style={styles.sizeField}>
+                    <Text style={styles.deepLabel}>縮放</Text>
+                    <TextInput
+                      editable={!editorLocked}
+                      keyboardType="decimal-pad"
+                      value={String(deepCell.style.backgroundImageScale ?? 1)}
+                      onChangeText={value =>
+                        replaceCell(deepCell.id, cell => ({
+                          ...cell,
+                          style: {
+                            ...cell.style,
+                            backgroundImageScale: Math.max(0.1, Math.min(8, Number(value) || 1)),
+                          },
+                        }))
+                      }
+                      style={styles.deepInput}
+                    />
+                  </View>
                 </View>
 
                 <Text style={styles.deepLabel}>動態顏色來源</Text>
