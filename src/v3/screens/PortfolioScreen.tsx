@@ -335,12 +335,8 @@ export function PortfolioScreen({
                   category:
                     CATEGORY_LABELS[row.categories[0] ?? 'market'] ??
                     (row.market === 'TW' ? '台股 ETF' : '美股 ETF'),
-                  cashPnl: privacy
-                    ? '••••'
-                    : `${row.view.cashPnl > 0 ? '+' : ''}${money(row.view.cashPnl)}`,
-                  cashRoi: privacy
-                    ? '••••'
-                    : `${row.view.cashRoi > 0 ? '+' : ''}${row.view.cashRoi.toFixed(2)}%`,
+                  cashPnl: privacy ? '••••' : row.view.cashPnl,
+                  cashRoi: privacy ? '••••' : row.view.cashRoi,
                 }}
                 reminderContext={(() => {
                   const event = common.dividends.find(
