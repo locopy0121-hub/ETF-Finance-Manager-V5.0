@@ -1,6 +1,7 @@
 import {
   createFrame360Template,
   mergeFrame360Cells,
+  migrateFrame360CellsToBlocks,
   type Frame360DataCell,
   type Frame360Template,
 } from './frame360';
@@ -64,5 +65,5 @@ export function createPortfolioHoldingFrame360Template(): Frame360Template {
   if (pnlId) setContent(template, pnlId, { kind: 'data', binding: 'cashPnl' });
   if (roiId) setContent(template, roiId, { kind: 'data', binding: 'cashRoi' });
 
-  return template;
+  return migrateFrame360CellsToBlocks(template);
 }
