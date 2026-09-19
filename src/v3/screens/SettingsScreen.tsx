@@ -20,7 +20,7 @@ import type {
 } from '../model';
 import { PAGE_REGISTRY, type PageFieldKey } from '../pageRegistry';
 import { normalizeGridMonitor } from '../monitoring';
-import { PageAddedFrames, PageFrame } from '../pageRuntime';
+import { PageFrame } from '../pageRuntime';
 import FontScaleScope from '../components/FontScaleScope';
 import Frame360EditorModal from '../components/Frame360EditorModal';
 import { createFrame360Template, type Frame360Template } from '../frame360';
@@ -944,7 +944,7 @@ const TOOLBOX_GROUPS: Array<{
   title: string;
   subtitle: string;
 }> = [
-  { key: 'layout', icon: '🖥️', title: '顯示與頁面設定', subtitle: '顯示開關 · 各頁面設定模式' },
+  { key: 'layout', icon: '🖥️', title: '顯示與頁面設定', subtitle: '顯示開關 · 360 全局開關' },
   { key: 'monitor', icon: '📹', title: '監視器與觀察清單', subtitle: 'Monitor · Watchlist · 警報與刷新' },
   { key: 'visual', icon: '🎨', title: '視覺與主題', subtitle: '主題 · 卡片 · 圖表 · Widget' },
   { key: 'system', icon: '🤖', title: '系統與 AI', subtitle: 'AI · 通知 · 行情更新 · OTA' },
@@ -1220,18 +1220,6 @@ export function SettingsScreen({
     });
   };
 
-  const patchPageCustomize = (page: PageFieldKey, value: boolean) => {
-    onChange({
-      monitoring: {
-        ...prefs.monitoring,
-        pageCustomize: {
-          ...prefs.monitoring.pageCustomize,
-          [page]: value,
-        },
-      },
-    });
-  };
-
   const toggleWatchSymbol = (symbol: string) => {
     const next = prefs.watchlistSymbols.includes(symbol)
       ? prefs.watchlistSymbols.filter(item => item !== symbol)
@@ -1269,21 +1257,23 @@ export function SettingsScreen({
       style={styles.screen}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      nestedScrollEnabled
     >
       <PageFrame prefs={prefs} page="settings" cardId="settings-header">
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>360 設定控制中心</Text>
-        <Text style={styles.pageTitle}>設定與頁面編輯器</Text>
+        <Text style={styles.eyebrow}>360 控制中心</Text>
+        <Text style={styles.pageTitle}>設定</Text>
         <Text style={styles.pageSubtitle}>
-          360 負責框架、格線、資料格、資料連接與組件設定；金融計算核心保持唯讀。
+          此頁只控制 360 開關；設定頁本身永久不進入 360 編輯。
         </Text>
       </View>
 
       <View style={styles.editModeCard}>
         <View style={styles.editModeText}>
-          <Text style={styles.editModeTitle}>頁面編輯模式</Text>
+          <Text style={styles.editModeTitle}>360 編輯器</Text>
           <Text style={styles.editModeSubtitle}>
-            開啟後，全 App 可配置 UI 進入 Global 360；長按框架即可編輯
+            開啟後，支援的功能頁可長按框架或方塊進入 360；設定頁不受影響
           </Text>
         </View>
         <Switch
@@ -1309,7 +1299,7 @@ export function SettingsScreen({
           ]}
         />
         <Text style={styles.statusText}>
-          {isEditModeActive ? 'Global 360 編輯模式已啟用' : '一般瀏覽模式'}
+          {isEditModeActive ? '360 編輯器已啟用' : '360 編輯器已關閉'}
         </Text>
       </View>
       </PageFrame>
@@ -1387,23 +1377,6 @@ export function SettingsScreen({
                     })
                   }
                 />
-
-                <Text style={styles.groupTitle}>各頁面設定模式</Text>
-                <View style={styles.choiceWrap}>
-                  {PAGE_REGISTRY.map(({ key, label }) => (
-                    <ChoicePill
-                      key={key}
-                      active={!!prefs.monitoring.pageCustomize[key]}
-                      label={label}
-                      onPress={() =>
-                        patchPageCustomize(
-                          key,
-                          !prefs.monitoring.pageCustomize[key],
-                        )
-                      }
-                    />
-                  ))}
-                </View>
 
               </>
             ) : null}
@@ -2120,7 +2093,6 @@ export function SettingsScreen({
         ))}
       </View>
       </PageFrame>
-      <PageAddedFrames prefs={prefs} page="settings" />
 
     </ScrollView>
     </FontScaleScope>
