@@ -8,28 +8,32 @@ import {
 } from '../frame360';
 import Frame360EditorModal from './Frame360EditorModal';
 
+export type Global360NodeDescriptor = { id: string; label: string; binding?: string; kind?: 'text' | 'data' | 'component' | 'container' };
+
 type Global360ContextValue = {
   enabled: boolean;
   openFrame: (
     page: PageFieldKey,
     cardId: string,
-    fields?: string[],
+    nodes?: Global360NodeDescriptor[],
     displayName?: string,
   ) => void;
+  resolveTemplate: (page: PageFieldKey, cardId: string) => Frame360Template | undefined;
 };
 
 const Global360Context = createContext<Global360ContextValue>({
   enabled: false,
   openFrame: () => undefined,
+  resolveTemplate: () => undefined,
 });
 
 function buildDefaultTemplate(
   page: PageFieldKey,
   cardId: string,
-  fields: string[],
+  nodes: Global360NodeDescriptor[],
   displayName?: string,
 ): Frame360Template {
-  const normalized = fields.length ? fields : ['content'];
+  const normalized = nodes.length ? nodes : [{ id: 'content', label: '內容', kind: 'container' as const }];
   const columns = Math.min(4, Math.max(1, normalized.length));
   const rows = Math.max(1, Math.ceil(normalized.length / columns));
   const template = createFrame360Template({
@@ -41,16 +45,13 @@ function buildDefaultTemplate(
     columns,
   });
   template.grid.dataCells = template.grid.dataCells.map((cell, index) => {
-    const binding = normalized[index];
-    if (!binding) return cell;
-    return {
-      ...cell,
-      content: {
-        kind: 'data' as const,
-        binding,
-        label: binding,
-      },
-    };
+    const node = normalized[index];
+    if (!node) return cell;
+    const content =
+      node.kind === 'data' || node.binding
+        ? { kind: 'data' as const, binding: node.binding ?? node.id, label: node.label, colorRule: 'auto' as const }
+        : { kind: 'text' as const, text: node.label };
+    return { ...cell, targetNodeId: node.id, nodeLabel: node.label, content };
   });
   return template;
 }
@@ -69,28 +70,28 @@ export function Global360Provider({
     prefs.globalEditMode ||
     Object.values(prefs.monitoring?.pageCustomize ?? {}).some(Boolean);
 
+  const resolveTemplate = useCallback(
+    (page: PageFieldKey, cardId: string) => prefs.frame360Templates?.[`${page}:${cardId}`],
+    [prefs.frame360Templates],
+  );
+
   const openFrame = useCallback(
     (
       page: PageFieldKey,
       cardId: string,
-      fields: string[] = [],
+      nodes: Global360NodeDescriptor[] = [],
       displayName?: string,
     ) => {
       if (!enabled) return;
-      const id = `${page}:${cardId}`;
-      const existing = prefs.frame360Templates?.[id];
-      setActive(
-        existing
-          ? JSON.parse(JSON.stringify(existing))
-          : buildDefaultTemplate(page, cardId, fields, displayName),
-      );
+      const existing = resolveTemplate(page, cardId);
+      setActive(existing ? JSON.parse(JSON.stringify(existing)) : buildDefaultTemplate(page, cardId, nodes, displayName));
     },
-    [enabled, prefs.frame360Templates],
+    [enabled, resolveTemplate],
   );
 
   const value = useMemo(
-    () => ({ enabled, openFrame }),
-    [enabled, openFrame],
+    () => ({ enabled, openFrame, resolveTemplate }),
+    [enabled, openFrame, resolveTemplate],
   );
 
   return (
