@@ -1,4 +1,4 @@
-# ETF財務管家 V5.0.0 NATIVE
+# ETF財務管家 V5.0.1 NATIVE
 
 Global Editor 2.1 + Floating Monitor Native 2.0 + Settings Layout 2.1 + Chart Engine 2.1 + AI Assistant 3.0 + App Icon Center + Native UI Foundation。
 
