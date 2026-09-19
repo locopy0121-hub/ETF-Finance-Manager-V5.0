@@ -312,7 +312,6 @@ export function PageFrame({
   if (page !== 'settings' && !pageCardVisible(prefs, page, cardId)) return null;
   const global360 = useGlobal360();
   const editActive = global360.canEditPage(page);
-  const pageModeVisible = global360.enabled && page !== 'settings';
   const fields = pageFieldsForFrame(prefs, page, cardId);
   const visualNodes = describeVisibleNodes(children);
   const descriptors: Global360NodeDescriptor[] = [
@@ -348,12 +347,6 @@ export function PageFrame({
       ]}
     >
       {renderedChildren}
-      {pageModeVisible && cardId === `${page}-header` ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={`${page} 360 設定模式`} onPress={() => global360.togglePageEdit(page)}
-          style={{position:'absolute',right:editActive?82:8,top:8,zIndex:1003,minHeight:34,borderRadius:999,borderWidth:1,borderColor:editActive?'#0066FF':'#CBD5E1',backgroundColor:editActive?'#EFF6FF':'#FFFFFF',paddingHorizontal:10,alignItems:'center',justifyContent:'center'}}>
-          <Text style={{color:editActive?'#0066FF':'#64748B',fontSize:10,fontWeight:'900'}}>{editActive?'設定模式 ON':'設定模式 OFF'}</Text>
-        </Pressable>
-      ) : null}
       {editActive && global360.canEditPage(page) ? (
         <Pressable
           accessibilityRole="button"
