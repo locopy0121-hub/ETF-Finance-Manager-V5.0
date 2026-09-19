@@ -1,0 +1,231 @@
+import React, { useEffect, useMemo, useRef } from 'react';
+import {
+  Animated,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+
+import type {
+  Frame360DataCell,
+  Frame360Effect,
+  Frame360Template,
+} from '../frame360';
+import {
+  resolveFrame360CellVisibility,
+  type Frame360ReminderContext,
+} from '../frame360Reminder';
+import { frame360ComponentLabel } from '../frame360Registry';
+
+type Props = {
+  template: Frame360Template;
+  data: Record<string, string | number | undefined>;
+  reminderContext: Frame360ReminderContext;
+  minHeight?: number;
+};
+
+function ReminderObject({
+  text,
+  effect,
+}: {
+  text: string;
+  effect: Frame360Effect;
+}) {
+  const value = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (effect === 'none') {
+      value.setValue(1);
+      return;
+    }
+    const low = effect === 'blink' ? 0.2 : 0.55;
+    const duration = effect === 'blink' ? 420 : 850;
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(value, {
+          toValue: low,
+          duration,
+          useNativeDriver: true,
+        }),
+        Animated.timing(value, {
+          toValue: 1,
+          duration,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [effect, value]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.reminderPill,
+        effect !== 'none' ? { opacity: value } : null,
+      ]}
+    >
+      <Text style={styles.reminderText}>{text}</Text>
+    </Animated.View>
+  );
+}
+
+function CellContent({
+  cell,
+  data,
+  reminderContext,
+}: {
+  cell: Frame360DataCell;
+  data: Props['data'];
+  reminderContext: Frame360ReminderContext;
+}) {
+  const visibility = resolveFrame360CellVisibility(cell, reminderContext);
+  if (!visibility.visible) return null;
+
+  const content = cell.content;
+  if (content.kind === 'empty') return null;
+  if (content.kind === 'text') {
+    return <Text style={styles.value}>{content.text}</Text>;
+  }
+  if (content.kind === 'data') {
+    const raw = data[content.binding];
+    return <Text style={styles.value}>{raw === undefined ? '—' : String(raw)}</Text>;
+  }
+  if (content.kind === 'reminder') {
+    return (
+      <ReminderObject
+        text={visibility.text ?? content.activeLabel}
+        effect={content.effect}
+      />
+    );
+  }
+  if (content.kind === 'component') {
+    return (
+      <View style={styles.componentPill}>
+        <Text style={styles.componentText}>
+          {frame360ComponentLabel(content.component)}
+        </Text>
+      </View>
+    );
+  }
+  if (content.kind === 'icon') {
+    return <Text style={styles.value}>{content.icon}</Text>;
+  }
+  if (content.kind === 'chart') {
+    return <Text style={styles.placeholder}>圖表</Text>;
+  }
+  if (content.kind === 'image') {
+    return <Text style={styles.placeholder}>圖片</Text>;
+  }
+  if (content.kind === 'container') {
+    return <Text style={styles.placeholder}>子框架</Text>;
+  }
+  return null;
+}
+
+export default function Frame360Runtime({
+  template,
+  data,
+  reminderContext,
+  minHeight = 92,
+}: Props) {
+  const rowHeight = minHeight / template.grid.rows;
+  const cells = useMemo(
+    () => [...template.grid.dataCells].sort((a, b) =>
+      a.rowStart === b.rowStart
+        ? a.columnStart - b.columnStart
+        : a.rowStart - b.rowStart,
+    ),
+    [template],
+  );
+
+  return (
+    <View style={[styles.root, { minHeight }]}>
+      {cells.map(cell => {
+        const left = ((cell.columnStart - 1) / template.grid.columns) * 100;
+        const top = ((cell.rowStart - 1) / template.grid.rows) * 100;
+        const width = (cell.columnSpan / template.grid.columns) * 100;
+        const height = rowHeight * cell.rowSpan;
+        const align =
+          cell.style.alignment.includes('Right')
+            ? 'flex-end'
+            : cell.style.alignment.includes('Left')
+              ? 'flex-start'
+              : 'center';
+
+        return (
+          <View
+            key={cell.id}
+            style={[
+              styles.cell,
+              {
+                left: `${left}%`,
+                top: `${top}%`,
+                width: `${width}%`,
+                height,
+                alignItems: align,
+                padding: cell.style.padding ?? 8,
+                borderRadius: cell.style.radius ?? 8,
+                opacity: (cell.style.opacity ?? 100) / 100,
+                backgroundColor: cell.style.backgroundColor ?? 'transparent',
+                borderColor: cell.style.borderColor ?? 'transparent',
+                borderWidth: cell.style.borderWidth ?? 0,
+              },
+            ]}
+          >
+            <CellContent
+              cell={cell}
+              data={data}
+              reminderContext={reminderContext}
+            />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    position: 'relative',
+    width: '100%',
+  },
+  cell: {
+    position: 'absolute',
+    justifyContent: 'center',
+  },
+  value: {
+    color: '#0F172A',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  reminderPill: {
+    borderRadius: 999,
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FDBA74',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  reminderText: {
+    color: '#C2410C',
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  componentPill: {
+    borderRadius: 999,
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  componentText: {
+    color: '#0066FF',
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  placeholder: {
+    color: '#64748B',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+});
