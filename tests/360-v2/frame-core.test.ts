@@ -4,6 +4,8 @@ import {
   createFrame360Template,
   instantiateFrame360Template,
   updateFrame360Template,
+  mergeFrame360Cells,
+  splitFrame360Cell,
 } from '../../src/v3/frame360';
 
 describe('360 frame core model', () => {
@@ -49,5 +51,34 @@ describe('360 frame core model', () => {
     expect(next.id).toBe(template.id);
     expect(next.templateKey).toBe(template.templateKey);
     expect(next.version).toBe(2);
+  });
+});
+
+
+describe('360 frame merge safety', () => {
+  it('requires an explicit decision when multiple selected cells already contain data', () => {
+    const grid = createFrame360Grid(1, 2);
+    grid.dataCells[0].content = { kind: 'text', text: '0050' };
+    grid.dataCells[1].content = { kind: 'text', text: '元大台灣50' };
+
+    const result = mergeFrame360Cells(
+      grid,
+      [grid.dataCells[0].id, grid.dataCells[1].id],
+    );
+
+    expect(result.status).toBe('needsDecision');
+  });
+
+  it('merges selected rectangle into one data cell and can split it back', () => {
+    const grid = createFrame360Grid(2, 2);
+    const ids = grid.dataCells.map(cell => cell.id);
+    const result = mergeFrame360Cells(grid, ids, 'keepFirst');
+    expect(result.status).toBe('merged');
+    if (result.status !== 'merged') return;
+    expect(result.grid.dataCells).toHaveLength(1);
+    expect(result.mergedCell.baseCellIds).toHaveLength(4);
+
+    const restored = splitFrame360Cell(result.grid, result.mergedCell.id);
+    expect(restored.dataCells).toHaveLength(4);
   });
 });
