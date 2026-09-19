@@ -74,6 +74,9 @@ const FULL_COLOR_PALETTE = Array.from({ length: 12 }, (_, hueIndex) =>
 ).flat();
 
 const DATA_SOURCE_GROUPS = [
+  { group: '基本資料', items: [
+    ['symbol', 'ETF 代號'], ['name', '名稱'],
+  ] },
   { group: '行情', items: [
     ['price', '即時行情'], ['previousClose', '昨日收盤'], ['changePct', '漲跌幅'], ['volume', '成交量'],
   ] },
@@ -87,6 +90,15 @@ const DATA_SOURCE_GROUPS = [
     ['totalAssets', '總資產'], ['cashBalance', '現金資金'], ['todayPnl', '今日損益'],
   ] },
 ] as const;
+
+function dataSourceLabel(binding: string) {
+  if (!binding) return '尚未指定';
+  for (const group of DATA_SOURCE_GROUPS) {
+    const item = group.items.find(([key]) => key === binding);
+    if (item) return item[1];
+  }
+  return '已連接資料';
+}
 
 type EditableBlockProps = {
   cell: Frame360DataCell;
@@ -498,7 +510,7 @@ export default function Frame360EditorModal({
       <View style={styles.sourceHeader}>
         <View style={{ flex: 1 }}>
           <Text style={styles.deepLabel}>數據來源</Text>
-          <Text style={styles.sourceValue}>{binding || '尚未指定'}</Text>
+          <Text style={styles.sourceValue}>{dataSourceLabel(binding)}</Text>
         </View>
         <Pressable
           onPress={() =>
