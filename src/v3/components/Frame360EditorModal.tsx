@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -129,6 +129,9 @@ export default function Frame360EditorModal({
   const [columnsText, setColumnsText] = useState('5');
   const [previewScale, setPreviewScale] = useState(100);
   const [editorLocked, setEditorLocked] = useState(Boolean(template?.locked));
+  const [sessionSnapshot, setSessionSnapshot] = useState<Frame360Template | null>(template ? cloneTemplate(template) : null);
+  const [deepSnapshot, setDeepSnapshot] = useState<Frame360DataCell | null>(null);
+  const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
 
   useEffect(() => {
     if (!visible || !template) return;
@@ -141,6 +144,9 @@ export default function Frame360EditorModal({
     setColumnsText(String(template.grid.columns));
     setPreviewScale(100);
     setEditorLocked(Boolean(template.locked));
+    setSessionSnapshot(migrateFrame360CellsToBlocks(cloneTemplate(template)));
+    setDeepSnapshot(null);
+    setGuides({});
   }, [visible, template?.id, template?.version]);
 
   const selectedCells = useMemo(
@@ -158,23 +164,17 @@ export default function Frame360EditorModal({
     if (!draft) return {};
     return Object.fromEntries(
       draft.grid.dataCells
-        .filter(cell => cell.content.kind === 'data')
+        .filter(cell => cell.content.kind === 'data' && cell.previewValue !== undefined)
         .map(cell => {
           const content = cell.content.kind === 'data' ? cell.content : null;
-          const key = content?.binding ?? '';
-          const lower = key.toLowerCase();
-          const sample =
-            lower.includes('pnl') || lower.includes('profit') ? 169 :
-            lower.includes('roi') || lower.includes('percent') ? 1.52 :
-            lower.includes('count') || lower.includes('share') ? 32 :
-            5754;
-          return [key, sample];
+          return [content?.binding ?? '', cell.previewValue];
         })
         .filter(([key]) => Boolean(key)),
     );
   }, [draft]);
 
-  const previewToday = '2099-01-01';
+  // Preview never invents sample values. It reuses values captured from the edited location.
+  const previewToday = new Date().toISOString().slice(0, 10);
 
   const replaceCell = (
     cellId: string,
@@ -497,7 +497,49 @@ export default function Frame360EditorModal({
     setSelected([cell.id]);
     setMultiSelectMode(false);
     setDeepCellId(cell.id);
+    setDeepSnapshot(JSON.parse(JSON.stringify(cell)) as Frame360DataCell);
     setDeepDialog(true);
+  };
+
+  const restoreDeepSnapshot = (closeAfter = false) => {
+    if (!deepSnapshot) return;
+    replaceCell(deepSnapshot.id, () => JSON.parse(JSON.stringify(deepSnapshot)) as Frame360DataCell);
+    if (closeAfter) {
+      setDeepDialog(false);
+      setDeepCellId(null);
+      setDeepSnapshot(null);
+    }
+  };
+
+  const resetSession = () => {
+    if (!sessionSnapshot) return;
+    setDraft(migrateFrame360CellsToBlocks(cloneTemplate(sessionSnapshot)));
+    setSelected([]);
+    setDeepDialog(false);
+    setDeepCellId(null);
+    setDeepSnapshot(null);
+    setGuides({});
+  };
+
+  const requestClose = () => {
+    if (!draft || !sessionSnapshot || JSON.stringify(draft) === JSON.stringify(sessionSnapshot)) {
+      onClose();
+      return;
+    }
+    Alert.alert('尚未儲存的修改', '要放棄這次 360 編輯嗎？', [
+      { text: '繼續編輯', style: 'cancel' },
+      { text: '放棄修改', style: 'destructive', onPress: onClose },
+      {
+        text: '儲存',
+        onPress: () =>
+          onSave({
+            ...draft,
+            locked: true,
+            version: draft.version + 1,
+            updatedAt: Date.now(),
+          }),
+      },
+    ]);
   };
 
   const cellPreviewText = (cell: Frame360DataCell) => {
@@ -591,7 +633,7 @@ export default function Frame360EditorModal({
 
   return (
     <>
-      <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <Modal visible={visible} animationType="slide" onRequestClose={requestClose}>
         <View
           style={[
             styles.screen,
@@ -609,7 +651,7 @@ export default function Frame360EditorModal({
                 工作區 {draft.grid.columns} 欄 × {draft.grid.rows} 列 · {draft.grid.dataCells.length} 個方塊 · 已選 {selected.length}
               </Text>
             </View>
-            <Pressable onPress={onClose} style={styles.closeButton}>
+            <Pressable onPress={requestClose} style={styles.closeButton}>
               <Text style={styles.closeText}>×</Text>
             </Pressable>
           </View>
@@ -709,8 +751,11 @@ export default function Frame360EditorModal({
               { paddingBottom: Math.max(18, insets.bottom + 10) },
             ]}
           >
-            <Pressable onPress={onClose} style={styles.secondaryButton}>
+            <Pressable onPress={requestClose} style={styles.secondaryButton}>
               <Text style={styles.secondaryText}>取消</Text>
+            </Pressable>
+            <Pressable onPress={resetSession} style={styles.secondaryButton}>
+              <Text style={styles.secondaryText}>還原</Text>
             </Pressable>
             <Pressable
               onPress={() =>
@@ -723,7 +768,7 @@ export default function Frame360EditorModal({
               }
               style={styles.primaryButton}
             >
-              <Text style={styles.primaryText}>儲存並上鎖</Text>
+              <Text style={styles.primaryText}>完成</Text>
             </Pressable>
           </View>
         </View>
@@ -830,26 +875,61 @@ export default function Frame360EditorModal({
 
                 <View style={styles.sizeRow}>
                   <View style={styles.sizeField}>
-                    <Text style={styles.deepLabel}>寬度 %</Text>
+                    <Text style={styles.deepLabel}>X px</Text>
                     <TextInput
                       editable={!editorLocked && !deepCell.layout?.locked}
                       keyboardType="decimal-pad"
-                      value={String(Math.round(getDefaultLayout(deepCell).width * 10) / 10)}
-                      onChangeText={value => updateBlockLayout(deepCell.id, layout => ({ ...layout, width: Number(value) || layout.width }))}
+                      value={String(Math.round((getDefaultLayout(deepCell).x / 100) * Math.max(1, draft.grid.columns * CELL_W)))}
+                      onChangeText={value => {
+                        const pxW = Math.max(1, draft.grid.columns * CELL_W);
+                        updateBlockLayout(deepCell.id, layout => ({ ...layout, x: ((Number(value) || 0) / pxW) * 100 }));
+                      }}
                       style={styles.deepInput}
                     />
                   </View>
                   <View style={styles.sizeField}>
-                    <Text style={styles.deepLabel}>高度 %</Text>
+                    <Text style={styles.deepLabel}>Y px</Text>
                     <TextInput
                       editable={!editorLocked && !deepCell.layout?.locked}
                       keyboardType="decimal-pad"
-                      value={String(Math.round(getDefaultLayout(deepCell).height * 10) / 10)}
-                      onChangeText={value => updateBlockLayout(deepCell.id, layout => ({ ...layout, height: Number(value) || layout.height }))}
+                      value={String(Math.round((getDefaultLayout(deepCell).y / 100) * Math.max(1, draft.grid.rows * CELL_H)))}
+                      onChangeText={value => {
+                        const pxH = Math.max(1, draft.grid.rows * CELL_H);
+                        updateBlockLayout(deepCell.id, layout => ({ ...layout, y: ((Number(value) || 0) / pxH) * 100 }));
+                      }}
                       style={styles.deepInput}
                     />
                   </View>
                 </View>
+                <View style={styles.sizeRow}>
+                  <View style={styles.sizeField}>
+                    <Text style={styles.deepLabel}>寬度 px</Text>
+                    <TextInput
+                      editable={!editorLocked && !deepCell.layout?.locked}
+                      keyboardType="decimal-pad"
+                      value={String(Math.round((getDefaultLayout(deepCell).width / 100) * Math.max(1, draft.grid.columns * CELL_W)))}
+                      onChangeText={value => {
+                        const pxW = Math.max(1, draft.grid.columns * CELL_W);
+                        updateBlockLayout(deepCell.id, layout => ({ ...layout, width: ((Number(value) || 1) / pxW) * 100, editorUnit: 'px' }));
+                      }}
+                      style={styles.deepInput}
+                    />
+                  </View>
+                  <View style={styles.sizeField}>
+                    <Text style={styles.deepLabel}>高度 px</Text>
+                    <TextInput
+                      editable={!editorLocked && !deepCell.layout?.locked}
+                      keyboardType="decimal-pad"
+                      value={String(Math.round((getDefaultLayout(deepCell).height / 100) * Math.max(1, draft.grid.rows * CELL_H)))}
+                      onChangeText={value => {
+                        const pxH = Math.max(1, draft.grid.rows * CELL_H);
+                        updateBlockLayout(deepCell.id, layout => ({ ...layout, height: ((Number(value) || 1) / pxH) * 100, editorUnit: 'px' }));
+                      }}
+                      style={styles.deepInput}
+                    />
+                  </View>
+                </View>
+                <Text style={styles.previewHint}>編輯以 px 顯示；儲存時保持相對父框架座標，跨尺寸仍可適配。</Text>
 
                 <Text style={styles.deepLabel}>位置微調</Text>
                 <View style={styles.nudgePad}>
@@ -1413,12 +1493,23 @@ export default function Frame360EditorModal({
               </ScrollView>
             ) : null}
 
-            <Pressable
-              onPress={() => setDeepDialog(false)}
-              style={styles.primaryButton}
-            >
-              <Text style={styles.primaryText}>完成</Text>
-            </Pressable>
+            <View style={styles.dialogActions}>
+              <Pressable onPress={() => restoreDeepSnapshot(true)} style={styles.secondaryButton}>
+                <Text style={styles.secondaryText}>取消</Text>
+              </Pressable>
+              <Pressable onPress={() => restoreDeepSnapshot(false)} style={styles.secondaryButton}>
+                <Text style={styles.secondaryText}>還原</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setDeepDialog(false);
+                  setDeepSnapshot(null);
+                }}
+                style={styles.primaryButton}
+              >
+                <Text style={styles.primaryText}>完成</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
