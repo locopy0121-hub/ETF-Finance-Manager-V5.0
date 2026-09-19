@@ -122,6 +122,7 @@ export function PortfolioScreen({
 }: PortfolioScreenProps) {
   const [tab, setTab] = useState<PortfolioTab>('all');
   const [editingHoldingFrame, setEditingHoldingFrame] = useState(false);
+  const [editingHoldingSymbol, setEditingHoldingSymbol] = useState<string | null>(null);
 
   const portfolio = useMemo(
     () =>
@@ -201,6 +202,24 @@ export function PortfolioScreen({
   const portfolioEditMode =
     common.prefs.globalEditMode &&
     Boolean(common.prefs.monitoring?.pageCustomize?.portfolio);
+  const editingHoldingRow = rows.find(row => row.symbol === editingHoldingSymbol);
+  const holdingPreviewData: Record<string, unknown> | undefined = editingHoldingRow
+    ? {
+        symbol: editingHoldingRow.symbol,
+        name: editingHoldingRow.name,
+        category:
+          CATEGORY_LABELS[editingHoldingRow.categories[0] ?? 'market'] ??
+          (editingHoldingRow.market === 'TW' ? '台股 ETF' : '美股 ETF'),
+        price: editingHoldingRow.view.price,
+        shares: editingHoldingRow.view.shares,
+        marketValue: editingHoldingRow.view.marketValue,
+        currentTradeCost: editingHoldingRow.view.currentTradeCost,
+        totalPnl: editingHoldingRow.view.cashPnl,
+        totalRoi: editingHoldingRow.view.cashRoi,
+        cashPnl: editingHoldingRow.view.cashPnl,
+        cashRoi: editingHoldingRow.view.cashRoi,
+      }
+    : undefined;
   const now = new Date();
   const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
@@ -313,6 +332,7 @@ export function PortfolioScreen({
               }}
               onLongPress={() => {
                 if (portfolioEditMode) {
+                  setEditingHoldingSymbol(row.symbol);
                   setEditingHoldingFrame(true);
                   return;
                 }
@@ -391,7 +411,11 @@ export function PortfolioScreen({
     <Frame360EditorModal
       visible={editingHoldingFrame}
       template={holdingFrameTemplate}
-      onClose={() => setEditingHoldingFrame(false)}
+      previewData={holdingPreviewData}
+      onClose={() => {
+        setEditingHoldingFrame(false);
+        setEditingHoldingSymbol(null);
+      }}
       onSave={template => {
         common.onPreferencesChange?.({
           frame360Templates: {
@@ -400,6 +424,7 @@ export function PortfolioScreen({
           },
         });
         setEditingHoldingFrame(false);
+        setEditingHoldingSymbol(null);
       }}
     />
     </FontScaleScope>
