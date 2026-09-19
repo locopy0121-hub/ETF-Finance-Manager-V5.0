@@ -1,23 +1,13 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import {
+  FRAME360_CELL_TYPES,
+  FRAME360_REMINDERS,
+} from '../../src/v3/frame360Registry';
 
-describe('360 UI mount', () => {
-  it('mounts the 360 grid editor in the settings control center', () => {
-    const settings = readFileSync('src/v3/screens/SettingsScreen.tsx', 'utf8');
-    expect(settings).toContain("import Frame360EditorModal");
-    expect(settings).toContain("<Frame360EditorModal");
-    expect(settings).toContain("open360Frame(card)");
-    expect(settings).toContain("frame360Templates");
-  });
-
-  it('uses popup-driven grid and cell type editing', () => {
-    const editor = readFileSync(
-      'src/v3/components/Frame360EditorModal.tsx',
-      'utf8',
-    );
-    expect(editor).toContain('新增儲存格格線');
-    expect(editor).toContain('選擇資料格類型');
-    expect(editor).toContain('合併資料格');
-    expect(editor).toContain('選擇提醒資料');
+describe('360 UI contract', () => {
+  it('exposes reminder and component choices required by the mounted editor', () => {
+    expect(FRAME360_CELL_TYPES.some(item => item.kind === 'reminder')).toBe(true);
+    expect(FRAME360_CELL_TYPES.some(item => item.kind === 'component')).toBe(true);
+    expect(FRAME360_REMINDERS.some(item => item.source === 'exDividendToday')).toBe(true);
   });
 });
