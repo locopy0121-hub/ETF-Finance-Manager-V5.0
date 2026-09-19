@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 
 import {
   appendFrame360Block,
@@ -32,11 +33,20 @@ import {
   frame360ComponentLabel,
 } from '../frame360Registry';
 
+export type Frame360ParentLayout = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  columns: number;
+};
+
 type Props = {
   visible: boolean;
   template: Frame360Template | null;
+  frameLayout?: Frame360ParentLayout;
   onClose: () => void;
-  onSave: (template: Frame360Template) => void;
+  onSave: (template: Frame360Template, frameLayout?: Frame360ParentLayout) => void;
 };
 
 const CELL_W = 72;
@@ -184,6 +194,7 @@ const ALIGNMENTS: Array<[Frame360Alignment, string]> = [
 export default function Frame360EditorModal({
   visible,
   template,
+  frameLayout,
   onClose,
   onSave,
 }: Props) {
@@ -202,6 +213,27 @@ export default function Frame360EditorModal({
   const [sessionSnapshot, setSessionSnapshot] = useState<Frame360Template | null>(template ? cloneTemplate(template) : null);
   const [deepSnapshot, setDeepSnapshot] = useState<Frame360DataCell | null>(null);
   const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
+  const [frameLayoutDraft, setFrameLayoutDraft] = useState<Frame360ParentLayout | undefined>(frameLayout);
+  const [deepOffset, setDeepOffset] = useState({ x: 0, y: 0 });
+  const deepPanStart = useRef({ x: 0, y: 0 });
+  const deepPan = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: (_event, gesture) =>
+          Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2,
+        onPanResponderGrant: () => {
+          deepPanStart.current = deepOffset;
+        },
+        onPanResponderMove: (_event, gesture) => {
+          setDeepOffset({
+            x: deepPanStart.current.x + gesture.dx,
+            y: deepPanStart.current.y + gesture.dy,
+          });
+        },
+      }),
+    [deepOffset],
+  );
 
   useEffect(() => {
     if (!visible || !template) return;
@@ -217,7 +249,9 @@ export default function Frame360EditorModal({
     setSessionSnapshot(migrateFrame360CellsToBlocks(cloneTemplate(template)));
     setDeepSnapshot(null);
     setGuides({});
-  }, [visible, template?.id, template?.version]);
+    setFrameLayoutDraft(frameLayout ? { ...frameLayout } : undefined);
+    setDeepOffset({ x: 0, y: 0 });
+  }, [visible, template?.id, template?.version, frameLayout?.x, frameLayout?.y, frameLayout?.w, frameLayout?.h, frameLayout?.columns]);
 
   const selectedCells = useMemo(
     () =>
@@ -234,10 +268,17 @@ export default function Frame360EditorModal({
     if (!draft) return {};
     return Object.fromEntries(
       draft.grid.dataCells
-        .filter(cell => cell.content.kind === 'data' && cell.previewValue !== undefined)
+        .filter(
+          cell =>
+            (cell.content.kind === 'data' || cell.content.kind === 'chart') &&
+            cell.previewValue !== undefined,
+        )
         .map(cell => {
-          const content = cell.content.kind === 'data' ? cell.content : null;
-          return [content?.binding ?? '', cell.previewValue];
+          const binding =
+            cell.content.kind === 'data' || cell.content.kind === 'chart'
+              ? cell.content.binding
+              : '';
+          return [binding, cell.previewValue];
         })
         .filter(([key]) => Boolean(key)),
     );
@@ -488,6 +529,28 @@ export default function Frame360EditorModal({
       />
     </>
   );
+
+  const pickBackgroundImage = async (cellId: string) => {
+    if (editorLocked) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      quality: 1,
+    });
+    if (result.canceled || !result.assets[0]?.uri) return;
+    const uri = result.assets[0].uri;
+    replaceCell(cellId, cell => ({
+      ...cell,
+      style: {
+        ...cell.style,
+        backgroundImageUri: uri,
+        backgroundImageFit: cell.style.backgroundImageFit ?? 'cover',
+        backgroundImageOpacity: cell.style.backgroundImageOpacity ?? 100,
+        backgroundImageScale: cell.style.backgroundImageScale ?? 1,
+        backgroundImageX: cell.style.backgroundImageX ?? 0,
+        backgroundImageY: cell.style.backgroundImageY ?? 0,
+      },
+    }));
+  };
 
   const renderSourcePicker = (
     cell: Frame360DataCell,
@@ -750,6 +813,7 @@ export default function Frame360EditorModal({
     setMultiSelectMode(false);
     setDeepCellId(cell.id);
     setDeepSnapshot(JSON.parse(JSON.stringify(cell)) as Frame360DataCell);
+    setDeepOffset({ x: 0, y: 0 });
     setDeepDialog(true);
   };
 
@@ -771,10 +835,22 @@ export default function Frame360EditorModal({
     setDeepCellId(null);
     setDeepSnapshot(null);
     setGuides({});
+    setFrameLayoutDraft(frameLayout ? { ...frameLayout } : undefined);
   };
 
   const requestClose = () => {
-    if (!draft || !sessionSnapshot || JSON.stringify(draft) === JSON.stringify(sessionSnapshot)) {
+    const currentDraft = draft;
+    const templateUnchanged =
+      !currentDraft ||
+      !sessionSnapshot ||
+      JSON.stringify(currentDraft) === JSON.stringify(sessionSnapshot);
+    const frameUnchanged =
+      JSON.stringify(frameLayoutDraft ?? null) === JSON.stringify(frameLayout ?? null);
+    if (templateUnchanged && frameUnchanged) {
+      onClose();
+      return;
+    }
+    if (!currentDraft) {
       onClose();
       return;
     }
@@ -784,12 +860,15 @@ export default function Frame360EditorModal({
       {
         text: '儲存',
         onPress: () =>
-          onSave({
-            ...draft,
-            locked: true,
-            version: draft.version + 1,
-            updatedAt: Date.now(),
-          }),
+          onSave(
+            {
+              ...currentDraft,
+              locked: true,
+              version: currentDraft.version + 1,
+              updatedAt: Date.now(),
+            },
+            frameLayoutDraft,
+          ),
       },
     ]);
   };
@@ -950,6 +1029,47 @@ export default function Frame360EditorModal({
 
           </View>
 
+          {frameLayoutDraft ? (
+            <View style={styles.framePanel}>
+              <View style={styles.previewHeader}>
+                <View>
+                  <Text style={styles.previewTitle}>主框架設定</Text>
+                  <Text style={styles.previewHint}>A→B：位置與大小相對父頁面格線；Block 再相對此框架。</Text>
+                </View>
+                <Text style={styles.frameBadge}>FRAME</Text>
+              </View>
+              <View style={styles.sizeRow}>
+                {([
+                  ['X', 'x'],
+                  ['Y', 'y'],
+                  ['寬', 'w'],
+                  ['高', 'h'],
+                ] as const).map(([label, key]) => (
+                  <View key={key} style={styles.frameSizeField}>
+                    <Text style={styles.deepLabel}>{label}</Text>
+                    <TextInput
+                      editable={!editorLocked}
+                      keyboardType="number-pad"
+                      value={String(frameLayoutDraft[key])}
+                      onChangeText={value =>
+                        setFrameLayoutDraft(current => {
+                          if (!current) return current;
+                          const numeric = Math.max(0, Number(value) || 0);
+                          const next = { ...current, [key]: numeric };
+                          if (key === 'w') next.w = Math.max(1, Math.min(current.columns, numeric || 1));
+                          if (key === 'h') next.h = Math.max(1, numeric || 1);
+                          if (key === 'x') next.x = Math.min(Math.max(0, numeric), Math.max(0, current.columns - current.w));
+                          return next;
+                        })
+                      }
+                      style={styles.frameInput}
+                    />
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
           <View style={styles.previewPanel}>
             <View style={styles.previewHeader}>
               <Text style={styles.previewTitle}>即時預覽框</Text>
@@ -1018,12 +1138,15 @@ export default function Frame360EditorModal({
             </Pressable>
             <Pressable
               onPress={() =>
-                onSave({
-                  ...draft,
-                  locked: true,
-                  version: draft.version + 1,
-                  updatedAt: Date.now(),
-                })
+                onSave(
+                  {
+                    ...draft,
+                    locked: true,
+                    version: draft.version + 1,
+                    updatedAt: Date.now(),
+                  },
+                  frameLayoutDraft,
+                )
               }
               style={styles.primaryButton}
             >
@@ -1093,17 +1216,25 @@ export default function Frame360EditorModal({
           <View
             style={[
               styles.deepSheet,
-              { paddingBottom: Math.max(20, insets.bottom + 14) },
+              {
+                paddingBottom: Math.max(20, insets.bottom + 14),
+                transform: [{ translateX: deepOffset.x }, { translateY: deepOffset.y }],
+              },
             ]}
           >
-            <Text style={styles.dialogTitle}>360 深度功能</Text>
-            <Text style={styles.dialogHint}>
-              {deepCell
-                ? `${cellPreviewText(deepCell)} · ${frame360CellTypeLabel(
-                    deepCell.content.kind,
-                  )}`
-                : ''}
-            </Text>
+            <View {...deepPan.panHandlers} style={styles.deepDragHandle}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.dialogTitle}>360 深度功能</Text>
+                <Text style={styles.dialogHint}>
+                  {deepCell
+                    ? `${cellPreviewText(deepCell)} · ${frame360CellTypeLabel(
+                        deepCell.content.kind,
+                      )}`
+                    : ''}
+                </Text>
+              </View>
+              <Text style={styles.dragHint}>拖移視窗</Text>
+            </View>
 
             {deepCell ? (
               <ScrollView
@@ -1616,6 +1747,34 @@ export default function Frame360EditorModal({
 
                 <Text style={styles.sectionTitle}>背景圖片</Text>
                 <Text style={styles.previewHint}>背景層與文字背景分離；此設定不會修改文字背景。</Text>
+                <View style={styles.choiceWrap}>
+                  <Pressable
+                    disabled={editorLocked}
+                    onPress={() => pickBackgroundImage(deepCell.id)}
+                    style={[styles.choice, editorLocked && styles.disabled]}
+                  >
+                    <Text style={styles.choiceText}>
+                      {deepCell.style.backgroundImageUri ? '更換圖片' : '選擇圖片'}
+                    </Text>
+                  </Pressable>
+                  {deepCell.style.backgroundImageUri ? (
+                    <Pressable
+                      disabled={editorLocked}
+                      onPress={() =>
+                        replaceCell(deepCell.id, cell => ({
+                          ...cell,
+                          style: {
+                            ...cell.style,
+                            backgroundImageUri: undefined,
+                          },
+                        }))
+                      }
+                      style={[styles.choice, styles.dangerChoice, editorLocked && styles.disabled]}
+                    >
+                      <Text style={styles.dangerChoiceText}>移除圖片</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
                 <TextInput
                   editable={!editorLocked}
                   value={deepCell.style.backgroundImageUri ?? ''}
@@ -1684,6 +1843,56 @@ export default function Frame360EditorModal({
                   >
                     <Text style={styles.stepButtonText}>＋</Text>
                   </Pressable>
+                </View>
+                <View style={styles.sizeRow}>
+                  <View style={styles.sizeField}>
+                    <Text style={styles.deepLabel}>圖片 X px</Text>
+                    <TextInput
+                      editable={!editorLocked}
+                      keyboardType="decimal-pad"
+                      value={String(deepCell.style.backgroundImageX ?? 0)}
+                      onChangeText={value =>
+                        replaceCell(deepCell.id, cell => ({
+                          ...cell,
+                          style: { ...cell.style, backgroundImageX: Number(value) || 0 },
+                        }))
+                      }
+                      style={styles.deepInput}
+                    />
+                  </View>
+                  <View style={styles.sizeField}>
+                    <Text style={styles.deepLabel}>圖片 Y px</Text>
+                    <TextInput
+                      editable={!editorLocked}
+                      keyboardType="decimal-pad"
+                      value={String(deepCell.style.backgroundImageY ?? 0)}
+                      onChangeText={value =>
+                        replaceCell(deepCell.id, cell => ({
+                          ...cell,
+                          style: { ...cell.style, backgroundImageY: Number(value) || 0 },
+                        }))
+                      }
+                      style={styles.deepInput}
+                    />
+                  </View>
+                  <View style={styles.sizeField}>
+                    <Text style={styles.deepLabel}>縮放</Text>
+                    <TextInput
+                      editable={!editorLocked}
+                      keyboardType="decimal-pad"
+                      value={String(deepCell.style.backgroundImageScale ?? 1)}
+                      onChangeText={value =>
+                        replaceCell(deepCell.id, cell => ({
+                          ...cell,
+                          style: {
+                            ...cell.style,
+                            backgroundImageScale: Math.max(0.1, Math.min(8, Number(value) || 1)),
+                          },
+                        }))
+                      }
+                      style={styles.deepInput}
+                    />
+                  </View>
                 </View>
 
                 <Text style={styles.deepLabel}>動態顏色來源</Text>
@@ -2068,6 +2277,39 @@ const styles = StyleSheet.create({
   toolText: { color: '#0066FF', fontSize: 11, fontWeight: '800' },
   toolTextActive: { color: '#FFFFFF' },
   disabled: { opacity: 0.35 },
+  framePanel: {
+    marginHorizontal: 18,
+    marginBottom: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    backgroundColor: '#EFF6FF',
+    padding: 12,
+  },
+  frameBadge: {
+    color: '#0066FF',
+    fontSize: 9,
+    fontWeight: '900',
+    borderWidth: 1,
+    borderColor: '#93C5FD',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  frameSizeField: { flex: 1, minWidth: 58 },
+  frameInput: {
+    minHeight: 38,
+    marginTop: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 8,
+    color: '#0F172A',
+    fontSize: 12,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
   previewPanel: {
     marginHorizontal: 18,
     borderRadius: 16,
@@ -2210,7 +2452,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 18,
   },
-  deepBody: { paddingVertical: 16, gap: 12 },
+  deepBody: { paddingVertical: 16, gap: 12, paddingBottom: 28 },
+  deepDragHandle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  dragHint: {
+    color: '#0066FF',
+    fontSize: 9,
+    fontWeight: '900',
+    borderRadius: 999,
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
   deepLabel: { color: '#334155', fontSize: 11, fontWeight: '900' },
   choiceWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   choice: {
