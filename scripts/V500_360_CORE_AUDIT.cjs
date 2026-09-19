@@ -7,6 +7,7 @@ const required = [
   'src/v3/frame360Components.ts',
   'src/v3/frame360Store.ts',
   'src/v3/frame360Defaults.ts',
+  'src/v3/frame360Color.ts',
   'src/v3/components/Frame360EditorModal.tsx',
   'src/v3/components/Frame360Runtime.tsx',
   'src/v3/components/Global360Context.tsx',
@@ -73,7 +74,7 @@ const editor = fs.readFileSync(
 );
 for (const token of [
   "position: 'absolute'",
-  'handleCellLongPress',
+  'handleBlockLongPress',
   'setDeepDialog(true)',
   '即時預覽框',
   '<Frame360Runtime',
@@ -87,7 +88,9 @@ for (const token of [
   '位置微調',
   '自由圖層 ON',
   '文字背景顏色',
-  '顏色規則',
+  "renderInlineColorRule('textColorRule')",
+  "renderInlineColorRule('textBackgroundColorRule')",
+  "renderInlineColorRule('backgroundColorRule')",
   '顯示狀態',
   'Android Elevation',
   '特效',
@@ -133,6 +136,21 @@ for (const token of [
   }
 }
 
+if (editor.includes('文字格') || editor.includes('資料格') || editor.includes('圖表格')) {
+  fail('360 editor still exposes deprecated Cell terminology');
+}
+if (editor.includes('顏色規則（互相獨立）')) {
+  fail('360 editor still exposes the deprecated separate color-rule panel');
+}
+
+const settingsMaster = fs.readFileSync('src/v3/screens/SettingsScreen.tsx', 'utf8');
+if (!settingsMaster.includes('onValueChange={globalEditMode => onChange({ globalEditMode })}')) {
+  fail('Settings no longer owns the single 360 master switch');
+}
+if (!settingsMaster.includes('設定頁本身永久不進入 360 編輯')) {
+  fail('Settings hard exclusion contract is missing');
+}
+
 const pageRuntime = fs.readFileSync('src/v3/pageRuntime.tsx', 'utf8');
 for (const token of [
   'describeVisibleNodes',
@@ -146,6 +164,13 @@ for (const token of [
   }
 }
 
+if (pageRuntime.includes('設定模式 ON') || pageRuntime.includes('設定模式 OFF')) {
+  fail('legacy per-page 360 setting-mode controls are still visible');
+}
+if (globalContext.includes('pageCustomize') || globalContext.includes('togglePageEdit')) {
+  fail('legacy per-page 360 gate is still wired');
+}
+
 const runtime = fs.readFileSync(
   'src/v3/components/Frame360Runtime.tsx',
   'utf8',
@@ -153,12 +178,23 @@ const runtime = fs.readFileSync(
 for (const token of [
   'evaluateFormula',
   'formatDataValue',
-  'resolveRuleColor',
+  'resolveFrame360RuleColor',
   'cell.style.visible === false',
   'RuntimeCellSurface',
 ]) {
   if (!runtime.includes(token)) {
     fail(`360 runtime missing deep feature: ${token}`);
+  }
+}
+
+const colorResolver = fs.readFileSync('src/v3/frame360Color.ts', 'utf8');
+for (const token of [
+  'resolveFrame360RuleColor',
+  "typeof value !== 'number'",
+  "surface === 'background' ? hex + '22' : hex",
+]) {
+  if (!colorResolver.includes(token)) {
+    fail(`360 color resolver missing raw numeric contract: ${token}`);
   }
 }
 
@@ -180,7 +216,7 @@ for (const [file, marker] of headers) {
 }
 
 const registry = fs.readFileSync('src/v3/frame360Registry.ts', 'utf8');
-for (const label of ['提醒格', '組件格', '月曆', '跑馬燈']) {
+for (const label of ['提醒方塊', '組件方塊', '資料方塊', '月曆', '跑馬燈']) {
   if (!registry.includes(label)) fail(`missing Chinese registry label: ${label}`);
 }
 
