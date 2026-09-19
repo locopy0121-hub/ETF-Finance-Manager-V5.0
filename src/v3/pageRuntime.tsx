@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import type { PageFieldKey } from './pageRegistry';
 import type { V3Preferences } from './model';
+import { useGlobal360 } from './components/Global360Context';
 
 const QUOTE_FIELDS = new Set(['price', 'previousClose', 'open', 'high', 'low', 'volume', 'marketValue', 'changePct']);
 const TODAY_FIELDS = new Set(['todayPnl', 'todayPnlPct']);
@@ -98,6 +99,8 @@ export function PageFrame({
   if (page !== 'settings' && !pageCardVisible(prefs, page, cardId)) return null;
   const editActive =
     prefs.globalEditMode || Boolean(prefs.monitoring?.pageCustomize?.[page]);
+  const global360 = useGlobal360();
+  const fields = pageFieldsForFrame(prefs, page, cardId);
   return (
     <View
       style={[
@@ -107,12 +110,33 @@ export function PageFrame({
               borderColor: '#0066FF',
               borderRadius: 16,
               padding: 2,
+              position: 'relative',
             }
           : undefined,
         style,
       ]}
     >
       {children}
+      {editActive && global360.enabled ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`360 編輯 ${cardId}`}
+          accessibilityHint="長按進入此區塊的 360 編輯器"
+          delayLongPress={360}
+          onPress={() => undefined}
+          onLongPress={() => global360.openFrame(page, cardId, fields, cardId)}
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0,
+            zIndex: 999,
+            borderRadius: 16,
+            backgroundColor: 'rgba(0,102,255,0.025)',
+          }}
+        />
+      ) : null}
     </View>
   );
 }
