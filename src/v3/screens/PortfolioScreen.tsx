@@ -13,6 +13,8 @@ import { classifyEtf, type EtfCategory } from '../etfResearch';
 import { V3_THEME, resolvePnlTone } from '../theme';
 import { PageFrame, PageFrameStack, pageFieldEnabled } from '../pageRuntime';
 import FontScaleScope from '../components/FontScaleScope';
+import Frame360Runtime from '../components/Frame360Runtime';
+import { createPortfolioHoldingFrame360Template } from '../frame360Defaults';
 import type { ScreenCommon } from '../screensBase';
 
 type PortfolioTab = 'all' | 'tw' | 'us';
@@ -191,6 +193,11 @@ export function PortfolioScreen({
   }, [rows]);
 
   const privacy = common.prefs.privacyMode;
+  const holdingFrameTemplate =
+    common.prefs.frame360Templates?.['portfolio:portfolio-list'] ??
+    createPortfolioHoldingFrame360Template();
+  const now = new Date();
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   return (
     <FontScaleScope prefs={common.prefs}>
@@ -297,41 +304,35 @@ export function PortfolioScreen({
               delayLongPress={420}
               style={styles.holdingCard}
             >
-              <View style={styles.cardTop}>
-                <View style={styles.identity}>
-                  <View style={styles.symbolPill}>
-                    <Text style={styles.symbolText}>{row.symbol}</Text>
-                  </View>
-                  <View style={styles.identityText}>
-                    <Text style={styles.holdingName}>{row.name}</Text>
-                    <View style={styles.tagRow}>
-                      <View style={styles.tag}>
-                        <Text style={styles.tagText}>{row.market === 'TW' ? '台股 ETF' : '美股 ETF'}</Text>
-                      </View>
-                      {row.categories.slice(0, 1).map(category => (
-                        <View key={category} style={styles.tag}>
-                          <Text style={styles.tagText}>{CATEGORY_LABELS[category]}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                </View>
-
-                {common.prefs.visibility.totalPnl && pageFieldEnabled(common.prefs, 'portfolio', 'cashPnl', 'portfolio-list') ? (
-                  <View style={[styles.pnlBadge, { backgroundColor: tone.background }]}>
-                    <Text style={[styles.pnlValue, { color: tone.foreground }]}>
-                      {privacy
-                        ? '••••'
-                        : `${row.view.cashPnl > 0 ? '+' : ''}${money(row.view.cashPnl)}`}
-                    </Text>
-                    {pageFieldEnabled(common.prefs, 'portfolio', 'cashRoi', 'portfolio-list') ? (
-                      <Text style={[styles.pnlPct, { color: tone.foreground }]}>
-                        {privacy ? '••••' : `${row.view.cashRoi > 0 ? '+' : ''}${row.view.cashRoi.toFixed(2)}%`}
-                      </Text>
-                    ) : null}
-                  </View>
-                ) : null}
-              </View>
+              <Frame360Runtime
+                template={holdingFrameTemplate}
+                minHeight={92}
+                data={{
+                  symbol: row.symbol,
+                  name: row.name,
+                  category:
+                    CATEGORY_LABELS[row.categories[0] ?? 'market'] ??
+                    (row.market === 'TW' ? '台股 ETF' : '美股 ETF'),
+                  cashPnl: privacy
+                    ? '••••'
+                    : `${row.view.cashPnl > 0 ? '+' : ''}${money(row.view.cashPnl)}`,
+                  cashRoi: privacy
+                    ? '••••'
+                    : `${row.view.cashRoi > 0 ? '+' : ''}${row.view.cashRoi.toFixed(2)}%`,
+                }}
+                reminderContext={(() => {
+                  const event = common.dividends.find(
+                    item => item.symbol === row.symbol,
+                  );
+                  return {
+                    today: todayKey,
+                    dividendDate: event?.payDate,
+                    exDividendDate: event?.exDate,
+                    lastBuyDate: event?.lastBuyDate,
+                    payDate: event?.payDate,
+                  };
+                })()}
+              />
 
               <View style={styles.metrics}>
                 {pageFieldEnabled(common.prefs, 'portfolio', 'price', 'portfolio-list') ? (
