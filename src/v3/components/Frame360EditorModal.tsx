@@ -174,6 +174,8 @@ function EditableBlock({
       PanResponder.create({
         onMoveShouldSetPanResponder: (_event, gesture) =>
           !locked && (Math.abs(gesture.dx) > 3 || Math.abs(gesture.dy) > 3),
+        onMoveShouldSetPanResponderCapture: (_event, gesture) =>
+          !locked && (Math.abs(gesture.dx) > 3 || Math.abs(gesture.dy) > 3),
         onPanResponderGrant: () => {
           lastDrag.current = { x: 0, y: 0 };
         },
@@ -184,6 +186,8 @@ function EditableBlock({
           lastDrag.current = { x: gesture.dx, y: gesture.dy };
           onDrag(dx, dy);
         },
+        onPanResponderTerminationRequest: () => false,
+        onShouldBlockNativeResponder: () => true,
       }),
     [locked, onDrag],
   );
@@ -1088,6 +1092,9 @@ export default function Frame360EditorModal({
             style={styles.canvas}
             contentContainerStyle={styles.canvasContent}
             horizontal
+            scrollEnabled={editorLocked}
+            directionalLockEnabled
+            keyboardShouldPersistTaps="handled"
           >
             {renderLockedGrid(false)}
           </ScrollView>
