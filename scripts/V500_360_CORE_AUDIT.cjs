@@ -77,7 +77,10 @@ for (const token of [
   'setDeepDialog(true)',
   '即時預覽框',
   '<Frame360Runtime',
-  '資料來源與技術識別碼已隱藏',
+  'renderSourcePicker',
+  'dataSourceLabel',
+  '數據來源',
+  '原生資料來源已保護；解鎖後才可重新指向。',
   '儲存並上鎖',
   '位置微調',
   '自由圖層 ON',
@@ -101,6 +104,10 @@ const bannedVisibleEnglish = [
   'Atomic Commit',
   'Runtime Sync',
 ];
+if (editor.includes("<Text style={styles.sourceValue}>{binding")) {
+  fail('360 editor exposes raw internal data binding key');
+}
+
 for (const token of bannedVisibleEnglish) {
   if (editor.includes(token)) {
     fail(`360 editor visible English residue: ${token}`);
