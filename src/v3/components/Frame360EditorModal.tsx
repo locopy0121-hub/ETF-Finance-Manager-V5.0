@@ -32,11 +32,20 @@ import {
   frame360ComponentLabel,
 } from '../frame360Registry';
 
+export type Frame360ParentLayout = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  columns: number;
+};
+
 type Props = {
   visible: boolean;
   template: Frame360Template | null;
+  frameLayout?: Frame360ParentLayout;
   onClose: () => void;
-  onSave: (template: Frame360Template) => void;
+  onSave: (template: Frame360Template, frameLayout?: Frame360ParentLayout) => void;
 };
 
 const CELL_W = 72;
@@ -184,6 +193,7 @@ const ALIGNMENTS: Array<[Frame360Alignment, string]> = [
 export default function Frame360EditorModal({
   visible,
   template,
+  frameLayout,
   onClose,
   onSave,
 }: Props) {
@@ -202,6 +212,7 @@ export default function Frame360EditorModal({
   const [sessionSnapshot, setSessionSnapshot] = useState<Frame360Template | null>(template ? cloneTemplate(template) : null);
   const [deepSnapshot, setDeepSnapshot] = useState<Frame360DataCell | null>(null);
   const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
+  const [frameLayoutDraft, setFrameLayoutDraft] = useState<Frame360ParentLayout | undefined>(frameLayout);
 
   useEffect(() => {
     if (!visible || !template) return;
@@ -217,7 +228,8 @@ export default function Frame360EditorModal({
     setSessionSnapshot(migrateFrame360CellsToBlocks(cloneTemplate(template)));
     setDeepSnapshot(null);
     setGuides({});
-  }, [visible, template?.id, template?.version]);
+    setFrameLayoutDraft(frameLayout ? { ...frameLayout } : undefined);
+  }, [visible, template?.id, template?.version, frameLayout?.x, frameLayout?.y, frameLayout?.w, frameLayout?.h, frameLayout?.columns]);
 
   const selectedCells = useMemo(
     () =>
@@ -784,12 +796,15 @@ export default function Frame360EditorModal({
       {
         text: '儲存',
         onPress: () =>
-          onSave({
-            ...draft,
-            locked: true,
-            version: draft.version + 1,
-            updatedAt: Date.now(),
-          }),
+          onSave(
+            {
+              ...draft,
+              locked: true,
+              version: draft.version + 1,
+              updatedAt: Date.now(),
+            },
+            frameLayoutDraft,
+          ),
       },
     ]);
   };
@@ -950,6 +965,47 @@ export default function Frame360EditorModal({
 
           </View>
 
+          {frameLayoutDraft ? (
+            <View style={styles.framePanel}>
+              <View style={styles.previewHeader}>
+                <View>
+                  <Text style={styles.previewTitle}>主框架設定</Text>
+                  <Text style={styles.previewHint}>A→B：位置與大小相對父頁面格線；Block 再相對此框架。</Text>
+                </View>
+                <Text style={styles.frameBadge}>FRAME</Text>
+              </View>
+              <View style={styles.sizeRow}>
+                {([
+                  ['X', 'x'],
+                  ['Y', 'y'],
+                  ['寬', 'w'],
+                  ['高', 'h'],
+                ] as const).map(([label, key]) => (
+                  <View key={key} style={styles.frameSizeField}>
+                    <Text style={styles.deepLabel}>{label}</Text>
+                    <TextInput
+                      editable={!editorLocked}
+                      keyboardType="number-pad"
+                      value={String(frameLayoutDraft[key])}
+                      onChangeText={value =>
+                        setFrameLayoutDraft(current => {
+                          if (!current) return current;
+                          const numeric = Math.max(0, Number(value) || 0);
+                          const next = { ...current, [key]: numeric };
+                          if (key === 'w') next.w = Math.max(1, Math.min(current.columns, numeric || 1));
+                          if (key === 'h') next.h = Math.max(1, numeric || 1);
+                          if (key === 'x') next.x = Math.min(Math.max(0, numeric), Math.max(0, current.columns - current.w));
+                          return next;
+                        })
+                      }
+                      style={styles.frameInput}
+                    />
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
           <View style={styles.previewPanel}>
             <View style={styles.previewHeader}>
               <Text style={styles.previewTitle}>即時預覽框</Text>
@@ -1018,12 +1074,15 @@ export default function Frame360EditorModal({
             </Pressable>
             <Pressable
               onPress={() =>
-                onSave({
-                  ...draft,
-                  locked: true,
-                  version: draft.version + 1,
-                  updatedAt: Date.now(),
-                })
+                onSave(
+                  {
+                    ...draft,
+                    locked: true,
+                    version: draft.version + 1,
+                    updatedAt: Date.now(),
+                  },
+                  frameLayoutDraft,
+                )
               }
               style={styles.primaryButton}
             >
@@ -2068,6 +2127,39 @@ const styles = StyleSheet.create({
   toolText: { color: '#0066FF', fontSize: 11, fontWeight: '800' },
   toolTextActive: { color: '#FFFFFF' },
   disabled: { opacity: 0.35 },
+  framePanel: {
+    marginHorizontal: 18,
+    marginBottom: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    backgroundColor: '#EFF6FF',
+    padding: 12,
+  },
+  frameBadge: {
+    color: '#0066FF',
+    fontSize: 9,
+    fontWeight: '900',
+    borderWidth: 1,
+    borderColor: '#93C5FD',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  frameSizeField: { flex: 1, minWidth: 58 },
+  frameInput: {
+    minHeight: 38,
+    marginTop: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 8,
+    color: '#0F172A',
+    fontSize: 12,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
   previewPanel: {
     marginHorizontal: 18,
     borderRadius: 16,
