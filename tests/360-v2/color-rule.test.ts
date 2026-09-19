@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveFrame360RuleColor } from '../../src/v3/components/Frame360Runtime';
+import { resolveFrame360RuleColor } from '../../src/v3/frame360Color';
 
 const colors = {
   positive: '#EF4444',
