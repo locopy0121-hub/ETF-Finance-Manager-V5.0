@@ -211,6 +211,7 @@ export function PortfolioScreen({
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
+      <PageFrame prefs={common.prefs} page="portfolio" cardId="portfolio-header">
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.eyebrow}>PORTFOLIO</Text>
@@ -235,6 +236,7 @@ export function PortfolioScreen({
           <Text style={styles.addButtonText}>+ 新增</Text>
         </Pressable>
       </View>
+      </PageFrame>
 
       <PageFrameStack prefs={common.prefs} page="portfolio">
       <PageFrame prefs={common.prefs} page="portfolio" cardId="portfolio-allocation">
