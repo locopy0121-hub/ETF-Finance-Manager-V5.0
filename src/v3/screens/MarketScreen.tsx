@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { calculateHoldingView } from '../engine';
-import { PageFrame, pageFieldEnabled } from '../pageRuntime';
+import { PageAddedFrames, PageFrame, pageFieldEnabled } from '../pageRuntime';
 import { V3_THEME, resolvePnlTone } from '../theme';
 import FontScaleScope from '../components/FontScaleScope';
 import type { ScreenCommon } from '../screensBase';
@@ -125,6 +125,7 @@ export function MarketScreen({ common, onSettings, onOpenHolding }: MarketScreen
           )}
         </View>
       </PageFrame>
+      <PageAddedFrames prefs={prefs} page="market" />
     </ScrollView>
     </FontScaleScope>
   );
