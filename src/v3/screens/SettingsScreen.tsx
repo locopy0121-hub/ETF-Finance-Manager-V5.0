@@ -24,6 +24,7 @@ import { PageFrame } from '../pageRuntime';
 import FontScaleScope from '../components/FontScaleScope';
 import Frame360EditorModal from '../components/Frame360EditorModal';
 import { createFrame360Template, type Frame360Template } from '../frame360';
+import { createPortfolioHoldingFrame360Template } from '../frame360Defaults';
 import {
   EFFECT_KINDS,
   effectDefaults,
@@ -1296,14 +1297,19 @@ export function SettingsScreen({
     const existing = frame360Templates[templateId];
     const template =
       existing ??
-      createFrame360Template({
-        id: templateId,
-        surface: selectedPage,
-        templateKey: card.role === 'listTemplate' ? 'shared-list-template' : card.id,
-        name: card.title,
-        rows: 2,
-        columns: 5,
-      });
+      (templateId === 'portfolio:portfolio-list'
+        ? createPortfolioHoldingFrame360Template()
+        : createFrame360Template({
+            id: templateId,
+            surface: selectedPage,
+            templateKey:
+              card.role === 'listTemplate'
+                ? 'shared-list-template'
+                : card.id,
+            name: card.title,
+            rows: 2,
+            columns: 5,
+          }));
 
     if (!existing) {
       onChange({
