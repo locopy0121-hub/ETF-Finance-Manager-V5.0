@@ -13,7 +13,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  createFrame360Grid,
+  appendFrame360Block,
+  migrateFrame360CellsToBlocks,
+  resizeFrame360Workspace,
   mergeFrame360Cells,
   splitFrame360Cell,
   type Frame360Alignment,
@@ -130,7 +132,7 @@ export default function Frame360EditorModal({
 
   useEffect(() => {
     if (!visible || !template) return;
-    setDraft(cloneTemplate(template));
+    setDraft(migrateFrame360CellsToBlocks(cloneTemplate(template)));
     setSelected([]);
     setDeepCellId(null);
     setDeepDialog(false);
@@ -367,7 +369,7 @@ export default function Frame360EditorModal({
       setTypeDialog(false);
       Alert.alert(
         '選擇組件',
-        '組件會成為此資料格內的獨立子根。',
+        '組件會成為此方塊內的獨立子根。',
         [
           ...FRAME360_COMPONENTS.map(item => ({
             text: item.label,
@@ -408,8 +410,8 @@ export default function Frame360EditorModal({
     const result = mergeFrame360Cells(draft.grid, selected);
     if (result.status === 'needsDecision') {
       Alert.alert(
-        '合併資料格',
-        '選取的資料格已有多筆內容，請選擇如何處理。系統不會自動刪除資料。',
+        '合併方塊',
+        '選取的方塊已有多筆內容，請選擇如何處理。系統不會自動刪除資料。',
         [
           {
             text: '保留第一格',
@@ -450,20 +452,30 @@ export default function Frame360EditorModal({
     setSelected([]);
   };
 
-  const createGrid = () => {
+  const resizeWorkspace = () => {
     const rows = Number(rowsText);
     const columns = Number(columnsText);
     try {
-      const grid = createFrame360Grid(rows, columns);
-      setDraft(current => (current ? { ...current, grid } : current));
+      setDraft(current =>
+        current ? resizeFrame360Workspace(current, rows, columns) : current,
+      );
       setSelected([]);
       setGridDialog(false);
     } catch (error) {
       Alert.alert(
-        '無法建立格線',
+        '無法調整工作區',
         error instanceof Error ? error.message : '請檢查列數與欄數',
       );
     }
+  };
+
+  const addBlock = () => {
+    if (!draft || editorLocked) return;
+    const result = appendFrame360Block(draft);
+    setDraft(result.template);
+    setSelected([result.block.id]);
+    setMultiSelectMode(false);
+    setTypeDialog(true);
   };
 
   const handleCellPress = (cell: Frame360DataCell) => {
@@ -515,7 +527,7 @@ export default function Frame360EditorModal({
           { width, height },
         ]}
       >
-        {draft.grid.dataCells.map(cell => {
+        {draft.grid.dataCells.filter(cell => cell.content.kind !== 'empty' || Boolean(cell.targetNodeId)).map(cell => {
           const active = !preview && selected.includes(cell.id);
           const layout = getDefaultLayout(cell);
           const baseStyle = cell.layout?.mode === 'free'
@@ -559,9 +571,7 @@ export default function Frame360EditorModal({
               {!preview ? (
                 <>
                   <Text style={styles.cellMeta}>
-                    {cell.layout?.mode === 'free'
-                      ? `自由 · Z${cell.layout?.zIndex ?? 0}`
-                      : `${cell.rowStart}-${cell.columnStart}${cell.rowSpan > 1 || cell.columnSpan > 1 ? ` · ${cell.columnSpan}×${cell.rowSpan}` : ''}`}
+                    {cell.layout?.mode === 'free' ? `Block · Z${cell.layout?.zIndex ?? 0}` : 'Block'}
                   </Text>
                   {cell.content.kind !== 'empty' ? (
                     <Text numberOfLines={1} style={styles.cellPreview}>
@@ -596,7 +606,7 @@ export default function Frame360EditorModal({
               <Text style={styles.eyebrow}>360 編輯器</Text>
               <Text style={styles.title}>{draft.name}</Text>
               <Text style={styles.subtitle}>
-                {draft.grid.columns} 欄 × {draft.grid.rows} 列 · 已選 {selected.length} 格
+                工作區 {draft.grid.columns} 欄 × {draft.grid.rows} 列 · ${draft.grid.dataCells.length} 個方塊 · 已選 {selected.length}
               </Text>
             </View>
             <Pressable onPress={onClose} style={styles.closeButton}>
@@ -622,34 +632,21 @@ export default function Frame360EditorModal({
                 {draft.allowOverlap ? '自由圖層 ON' : 'ZERO OVERLAP'}
               </Text>
             </Pressable>
-            <Pressable onPress={() => setGridDialog(true)} style={styles.toolButton}>
-              <Text style={styles.toolText}>新增格線</Text>
+            <Pressable
+              disabled={editorLocked}
+              onPress={addBlock}
+              style={[styles.toolButton, styles.addBlockButton, editorLocked && styles.disabled]}
+            >
+              <Text style={[styles.toolText, styles.addBlockText]}>＋新增方塊</Text>
             </Pressable>
             <Pressable
-              onPress={() => {
-                setMultiSelectMode(value => !value);
-                setSelected([]);
-              }}
-              style={[styles.toolButton, multiSelectMode && styles.toolButtonActive]}
+              disabled={editorLocked}
+              onPress={() => setGridDialog(true)}
+              style={[styles.toolButton, editorLocked && styles.disabled]}
             >
-              <Text style={[styles.toolText, multiSelectMode && styles.toolTextActive]}>
-                {multiSelectMode ? '結束多選' : '多選合併'}
-              </Text>
+              <Text style={styles.toolText}>調整工作區格線</Text>
             </Pressable>
-            <Pressable
-              disabled={selected.length < 2}
-              onPress={mergeSelected}
-              style={[styles.toolButton, selected.length < 2 && styles.disabled]}
-            >
-              <Text style={styles.toolText}>合併</Text>
-            </Pressable>
-            <Pressable
-              disabled={selected.length !== 1}
-              onPress={splitSelected}
-              style={[styles.toolButton, selected.length !== 1 && styles.disabled]}
-            >
-              <Text style={styles.toolText}>拆分</Text>
-            </Pressable>
+
           </View>
 
           <View style={styles.previewPanel}>
@@ -735,8 +732,8 @@ export default function Frame360EditorModal({
       <Modal visible={gridDialog} transparent animationType="fade">
         <View style={styles.backdrop}>
           <View style={[styles.dialog, { paddingBottom: Math.max(18, insets.bottom + 12) }]}>
-            <Text style={styles.dialogTitle}>新增方塊格線</Text>
-            <Text style={styles.dialogHint}>輸入欄 × 列，例如 8 × 4。</Text>
+            <Text style={styles.dialogTitle}>調整目前框架工作區</Text>
+            <Text style={styles.dialogHint}>只調整定位格線，不新增、不刪除任何方塊。輸入欄 × 列，例如 8 × 4。</Text>
             <View style={styles.inputRow}>
               <TextInput
                 keyboardType="number-pad"
@@ -756,8 +753,8 @@ export default function Frame360EditorModal({
               <Pressable onPress={() => setGridDialog(false)} style={styles.secondaryButton}>
                 <Text style={styles.secondaryText}>取消</Text>
               </Pressable>
-              <Pressable onPress={createGrid} style={styles.primaryButton}>
-                <Text style={styles.primaryText}>確定建立</Text>
+              <Pressable onPress={resizeWorkspace} style={styles.primaryButton}>
+                <Text style={styles.primaryText}>套用到目前框架</Text>
               </Pressable>
             </View>
           </View>
@@ -1410,7 +1407,7 @@ export default function Frame360EditorModal({
                 ) : null}
 
                 <View style={styles.deepPreviewBox}>
-                  <Text style={styles.previewTitle}>此格預覽</Text>
+                  <Text style={styles.previewTitle}>此方塊預覽</Text>
                   <Text style={styles.deepPreviewText}>{cellPreviewText(deepCell)}</Text>
                 </View>
               </ScrollView>
@@ -1470,6 +1467,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   toolButtonActive: { backgroundColor: '#0066FF' },
+  addBlockButton: { backgroundColor: '#0066FF' },
+  addBlockText: { color: '#FFFFFF' },
   toolText: { color: '#0066FF', fontSize: 11, fontWeight: '800' },
   toolTextActive: { color: '#FFFFFF' },
   disabled: { opacity: 0.35 },
@@ -1509,9 +1508,9 @@ const styles = StyleSheet.create({
   canvas: { flex: 1 },
   canvasContent: { padding: 18 },
   cell: {
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
+    borderWidth: 1,
     borderColor: '#CBD5E1',
+    borderRadius: 10,
     backgroundColor: '#FFFFFF',
     padding: 7,
     justifyContent: 'center',
