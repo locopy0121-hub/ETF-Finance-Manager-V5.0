@@ -554,19 +554,45 @@ export default function Frame360EditorModal({
       return snapLayout(cellId, { ...layout, width, height, editorUnit: 'px' });
     });
 
-  const setLayer = (cellId: string, action: 'up' | 'down' | 'top' | 'bottom') => {
-    if (!draft || editorLocked) return;
-    const zValues = draft.blocks.map(cell => cell.layout?.zIndex ?? 0);
-    const min = Math.min(0, ...zValues);
-    const max = Math.max(0, ...zValues);
-    updateBlockLayout(cellId, layout => ({
-      ...layout,
-      zIndex:
-        action === 'top' ? max + 1 :
-        action === 'bottom' ? min - 1 :
-        action === 'up' ? (layout.zIndex ?? 0) + 1 :
-        (layout.zIndex ?? 0) - 1,
-    }));
+  const setLayer = (blockId: string, action: 'up' | 'down' | 'top' | 'bottom') => {
+    if (editorLocked) return;
+    setDraft(current => {
+      if (!current) return current;
+      const target = current.blocks.find(block => block.id === blockId);
+      if (!target || target.layout?.locked) return current;
+
+      const ordered = current.blocks
+        .slice()
+        .sort((a, b) => {
+          const z = (a.layout?.zIndex ?? 0) - (b.layout?.zIndex ?? 0);
+          return z !== 0 ? z : a.id.localeCompare(b.id);
+        });
+      const index = ordered.findIndex(block => block.id === blockId);
+      if (index < 0) return current;
+
+      const [moving] = ordered.splice(index, 1);
+      const destination =
+        action === 'top'
+          ? ordered.length
+          : action === 'bottom'
+            ? 0
+            : action === 'up'
+              ? Math.min(ordered.length, index + 1)
+              : Math.max(0, index - 1);
+      ordered.splice(destination, 0, moving);
+
+      const zById = new Map(ordered.map((block, zIndex) => [block.id, zIndex]));
+      return {
+        ...current,
+        blocks: current.blocks.map(block => ({
+          ...block,
+          layout: {
+            ...getDefaultLayout(block),
+            zIndex: zById.get(block.id) ?? block.layout?.zIndex ?? 0,
+          },
+        })),
+      };
+    });
   };
 
   const renderColorPalette = (
@@ -1351,12 +1377,13 @@ export default function Frame360EditorModal({
                   ))}
                 </View>
 
-                <Text style={styles.deepLabel}>圖層</Text>
+                <Text style={styles.deepLabel}>圖層 · 目前 Z{getDefaultLayout(deepCell).zIndex ?? 0}</Text>
+                <Text style={styles.previewHint}>{draft.allowOverlap ? '自由圖層 ON：重疊時可立即驗證前後層。' : 'ZERO OVERLAP：Z 值仍會保存，但需開啟自由圖層才能看到重疊效果。'}</Text>
                 <View style={styles.choiceWrap}>
-                  <Pressable style={styles.choice} onPress={() => setLayer(deepCell.id, 'top')}><Text style={styles.choiceText}>最上層</Text></Pressable>
-                  <Pressable style={styles.choice} onPress={() => setLayer(deepCell.id, 'up')}><Text style={styles.choiceText}>上移一層</Text></Pressable>
-                  <Pressable style={styles.choice} onPress={() => setLayer(deepCell.id, 'down')}><Text style={styles.choiceText}>下移一層</Text></Pressable>
-                  <Pressable style={styles.choice} onPress={() => setLayer(deepCell.id, 'bottom')}><Text style={styles.choiceText}>最下層</Text></Pressable>
+                  <Pressable disabled={editorLocked || Boolean(deepCell.layout?.locked)} style={[styles.choice,(editorLocked || Boolean(deepCell.layout?.locked)) && styles.disabled]} onPress={() => setLayer(deepCell.id, 'top')}><Text style={styles.choiceText}>最上層</Text></Pressable>
+                  <Pressable disabled={editorLocked || Boolean(deepCell.layout?.locked)} style={[styles.choice,(editorLocked || Boolean(deepCell.layout?.locked)) && styles.disabled]} onPress={() => setLayer(deepCell.id, 'up')}><Text style={styles.choiceText}>上移一層</Text></Pressable>
+                  <Pressable disabled={editorLocked || Boolean(deepCell.layout?.locked)} style={[styles.choice,(editorLocked || Boolean(deepCell.layout?.locked)) && styles.disabled]} onPress={() => setLayer(deepCell.id, 'down')}><Text style={styles.choiceText}>下移一層</Text></Pressable>
+                  <Pressable disabled={editorLocked || Boolean(deepCell.layout?.locked)} style={[styles.choice,(editorLocked || Boolean(deepCell.layout?.locked)) && styles.disabled]} onPress={() => setLayer(deepCell.id, 'bottom')}><Text style={styles.choiceText}>最下層</Text></Pressable>
                 </View>
                 <View style={styles.choiceWrap}>
                   <Pressable style={styles.choice} onPress={() => duplicateBlock(deepCell.id)}>
