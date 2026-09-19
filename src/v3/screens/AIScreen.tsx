@@ -188,6 +188,7 @@ export function AIScreen({ common, onSettings }: AIScreenProps) {
   return (
     <FontScaleScope prefs={common.prefs} percent={effectiveFontPercent}>
     <View style={styles.screen}>
+      <PageFrame prefs={common.prefs} page="ai" cardId="ai-header">
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.eyebrow}>AI RESEARCH</Text>
@@ -203,6 +204,7 @@ export function AIScreen({ common, onSettings }: AIScreenProps) {
           <Text style={styles.clearButtonText}>清空對話</Text>
         </Pressable>
       </View>
+      </PageFrame>
 
       <PageFrame prefs={common.prefs} page="ai" cardId="ai-main" style={{ flex: 1 }}>
       <View style={[styles.networkBadge, connected === false && styles.networkBadgeOffline]}>
