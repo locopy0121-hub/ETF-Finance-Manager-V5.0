@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import {
   Animated,
   Image,
-  ImageBackground,
   StyleSheet,
   Text,
   View,
@@ -430,37 +429,37 @@ function RuntimeCellSurface({
   return (
     <Animated.View style={[styles.cell, style, animatedStyle]}>
       {backgroundUri ? (
-        <ImageBackground
+        <Image
+          pointerEvents="none"
           source={{ uri: backgroundUri }}
           resizeMode={resizeMode as any}
-          style={styles.backgroundImage}
-          imageStyle={{
-            opacity: (cell.style.backgroundImageOpacity ?? 100) / 100,
-            transform: [
-              { translateX: cell.style.backgroundImageX ?? 0 },
-              { translateY: cell.style.backgroundImageY ?? 0 },
-              { scale: cell.style.backgroundImageScale ?? 1 },
-              { rotate: `${cell.style.backgroundImageRotation ?? 0}deg` },
-            ],
-          }}
-        >
-          {cell.style.backgroundOverlayColor ? (
-            <View
-              pointerEvents="none"
-              style={[
-                StyleSheet.absoluteFill,
-                {
-                  backgroundColor: cell.style.backgroundOverlayColor,
-                  opacity: (cell.style.backgroundOverlayOpacity ?? 0) / 100,
-                },
-              ]}
-            />
-          ) : null}
-          {children}
-        </ImageBackground>
-      ) : (
-        children
-      )}
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              opacity: (cell.style.backgroundImageOpacity ?? 100) / 100,
+              transform: [
+                { translateX: cell.style.backgroundImageX ?? 0 },
+                { translateY: cell.style.backgroundImageY ?? 0 },
+                { scale: cell.style.backgroundImageScale ?? 1 },
+                { rotate: `${cell.style.backgroundImageRotation ?? 0}deg` },
+              ],
+            },
+          ]}
+        />
+      ) : null}
+      {cell.style.backgroundOverlayColor && (cell.style.backgroundOverlayOpacity ?? 0) > 0 ? (
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: cell.style.backgroundOverlayColor,
+              opacity: (cell.style.backgroundOverlayOpacity ?? 0) / 100,
+            },
+          ]}
+        />
+      ) : null}
+      {children}
     </Animated.View>
   );
 }
@@ -612,11 +611,4 @@ const styles = StyleSheet.create({
   },
   chartBox: { width: '100%', minHeight: 72, justifyContent: 'center' },
   contentImage: { width: '100%', height: '100%' },
-  backgroundImage: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-    alignItems: 'inherit' as any,
-    justifyContent: 'inherit' as any,
-  },
 });
