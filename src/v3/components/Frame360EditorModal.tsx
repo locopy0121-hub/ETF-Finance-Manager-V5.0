@@ -805,10 +805,15 @@ export default function Frame360EditorModal({
     setDeepCellId(null);
     setDeepSnapshot(null);
     setGuides({});
+    setFrameLayoutDraft(frameLayout ? { ...frameLayout } : undefined);
   };
 
   const requestClose = () => {
-    if (!draft || !sessionSnapshot || JSON.stringify(draft) === JSON.stringify(sessionSnapshot)) {
+    const templateUnchanged =
+      !draft || !sessionSnapshot || JSON.stringify(draft) === JSON.stringify(sessionSnapshot);
+    const frameUnchanged =
+      JSON.stringify(frameLayoutDraft ?? null) === JSON.stringify(frameLayout ?? null);
+    if (templateUnchanged && frameUnchanged) {
       onClose();
       return;
     }
