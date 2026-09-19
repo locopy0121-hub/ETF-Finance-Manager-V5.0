@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
 import type { PageFieldKey } from '../pageRegistry';
-import type { V3Preferences } from '../model';
+import type { V3PageCard, V3Preferences } from '../model';
 import {
   createFrame360Template,
   migrateFrame360CellsToBlocks,
@@ -19,12 +19,14 @@ type Global360ContextValue = {
     nodes?: Global360NodeDescriptor[],
     displayName?: string,
   ) => void;
+  addPageFrame: (page: PageFieldKey) => void;
   resolveTemplate: (page: PageFieldKey, cardId: string) => Frame360Template | undefined;
 };
 
 const Global360Context = createContext<Global360ContextValue>({
   enabled: false,
   openFrame: () => undefined,
+  addPageFrame: () => undefined,
   resolveTemplate: () => undefined,
 });
 
@@ -95,9 +97,70 @@ export function Global360Provider({
     [enabled, resolveTemplate],
   );
 
+  const addPageFrame = useCallback(
+    (page: PageFieldKey) => {
+      if (!enabled) return;
+      const layout = prefs.pageLayouts?.[page];
+      if (!layout) return;
+      const existingCustomCount = layout.cards.filter(card =>
+        card.id.startsWith(`${page}-custom-`),
+      ).length;
+      const ordinal = existingCustomCount + 1;
+      const cardId = `${page}-custom-${Date.now()}`;
+      const title = `自訂框架 ${ordinal}`;
+      const y = layout.cards.reduce((max, card) => Math.max(max, card.y + card.h), 0);
+      const card: V3PageCard = {
+        id: cardId,
+        title,
+        kind: 'custom',
+        role: 'normal',
+        fields: [],
+        fieldSpans: {},
+        fieldConfigs: {},
+        fieldGap: 8,
+        x: 0,
+        y,
+        w: layout.columns,
+        h: 2,
+        hidden: false,
+        style: {
+          fontScale: 100,
+          align: 'left',
+          backgroundOpacity: 100,
+          radius: 16,
+          padding: 12,
+        },
+      };
+      const template = createFrame360Template({
+        id: `${page}:${cardId}`,
+        surface: page,
+        templateKey: `global:${page}:${cardId}`,
+        name: title,
+        rows: 4,
+        columns: layout.columns,
+      });
+      const blockTemplate = migrateFrame360CellsToBlocks(template);
+      onPreferencesChange({
+        pageLayouts: {
+          ...prefs.pageLayouts,
+          [page]: {
+            ...layout,
+            cards: [...layout.cards, card],
+          },
+        },
+        frame360Templates: {
+          ...(prefs.frame360Templates ?? {}),
+          [blockTemplate.id]: blockTemplate,
+        },
+      });
+      setActive(blockTemplate);
+    },
+    [enabled, onPreferencesChange, prefs.frame360Templates, prefs.pageLayouts],
+  );
+
   const value = useMemo(
-    () => ({ enabled, openFrame, resolveTemplate }),
-    [enabled, openFrame, resolveTemplate],
+    () => ({ enabled, openFrame, addPageFrame, resolveTemplate }),
+    [enabled, openFrame, addPageFrame, resolveTemplate],
   );
 
   return (
