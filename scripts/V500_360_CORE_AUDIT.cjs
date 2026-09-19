@@ -29,7 +29,6 @@ const subsystem = required
 
 const bannedLegacy = [
   'UniversalEditor',
-  'pageCustomize',
   'editorSchema',
   'legacy',
   'Legacy',
