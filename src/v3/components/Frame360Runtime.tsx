@@ -419,7 +419,14 @@ function RuntimeCellSurface({
           source={{ uri: backgroundUri }}
           resizeMode={resizeMode as any}
           style={styles.backgroundImage}
-          imageStyle={{ opacity: (cell.style.backgroundImageOpacity ?? 100) / 100 }}
+          imageStyle={{
+            opacity: (cell.style.backgroundImageOpacity ?? 100) / 100,
+            transform: [
+              { translateX: cell.style.backgroundImageX ?? 0 },
+              { translateY: cell.style.backgroundImageY ?? 0 },
+              { scale: cell.style.backgroundImageScale ?? 1 },
+            ],
+          }}
         >
           {cell.style.backgroundOverlayColor ? (
             <View
