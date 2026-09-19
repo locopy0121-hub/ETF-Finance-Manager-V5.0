@@ -533,7 +533,6 @@ export default function Frame360EditorModal({
   const pickBackgroundImage = async (cellId: string) => {
     if (editorLocked) return;
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
       allowsEditing: true,
       quality: 1,
     });
