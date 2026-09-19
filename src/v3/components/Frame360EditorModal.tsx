@@ -365,11 +365,25 @@ export default function Frame360EditorModal({
     ...cell.layout,
   });
 
-  const rectsOverlap = (a: any, b: any) =>
-    a.x < b.x + b.width &&
-    a.x + a.width > b.x &&
-    a.y < b.y + b.height &&
-    a.y + a.height > b.y;
+  const rectsOverlap = (a: any, b: any) => {
+    const epsilon = 0.05;
+    return (
+      a.x < b.x + b.width - epsilon &&
+      a.x + a.width > b.x + epsilon &&
+      a.y < b.y + b.height - epsilon &&
+      a.y + a.height > b.y + epsilon
+    );
+  };
+
+  const collidesWithOtherBlocks = (
+    template: Frame360Template,
+    cellId: string,
+    layout: ReturnType<typeof getDefaultLayout>,
+  ) =>
+    template.blocks.some(other => {
+      if (other.id === cellId || other.content.kind === 'empty') return false;
+      return rectsOverlap(layout, getDefaultLayout(other));
+    });
 
   const updateBlockLayout = (
     cellId: string,
@@ -389,17 +403,18 @@ export default function Frame360EditorModal({
         width: Math.max(next.minWidth ?? 4, Math.min(next.maxWidth ?? 100, next.width)),
         height: Math.max(next.minHeight ?? 4, Math.min(next.maxHeight ?? 100, next.height)),
       };
-      if (!current.allowOverlap) {
-        const collision = current.blocks.some(other => {
-          if (other.id === cellId || other.content.kind === 'empty') return false;
-          return rectsOverlap(normalized, getDefaultLayout(other));
-        });
-        if (collision) return current;
+      let resolved = normalized;
+      if (!current.allowOverlap && collidesWithOtherBlocks(current, cellId, normalized)) {
+        const xOnly = { ...normalized, y: base.y };
+        const yOnly = { ...normalized, x: base.x };
+        if (!collidesWithOtherBlocks(current, cellId, xOnly)) resolved = xOnly;
+        else if (!collidesWithOtherBlocks(current, cellId, yOnly)) resolved = yOnly;
+        else return current;
       }
       return {
         ...current,
         blocks: current.blocks.map(cell =>
-          cell.id === cellId ? { ...cell, layout: normalized } : cell,
+          cell.id === cellId ? { ...cell, layout: resolved } : cell,
         ),
       };
     });
@@ -436,25 +451,56 @@ export default function Frame360EditorModal({
     cellId: string,
     layout: ReturnType<typeof getDefaultLayout>,
   ) => {
-    if (!draft) return layout;
+    if (!draft || !draft.canvas.snapEnabled) {
+      setGuides({});
+      return layout;
+    }
     const pxW = Math.max(1, draft.canvas.width);
     const pxH = Math.max(1, draft.canvas.height);
-    const thresholdX = (6 / pxW) * 100;
-    const thresholdY = (6 / pxH) * 100;
-    const xGuides = [0, 50, 100];
-    const yGuides = [0, 50, 100];
-    draft.blocks.forEach(other => {
-      if (other.id === cellId || other.content.kind === 'empty') return;
-      const rect = getDefaultLayout(other);
-      xGuides.push(rect.x, rect.x + rect.width / 2, rect.x + rect.width);
-      yGuides.push(rect.y, rect.y + rect.height / 2, rect.y + rect.height);
-    });
+    const thresholdPx = Math.max(0, draft.canvas.snapThreshold ?? 6);
+    const thresholdX = (thresholdPx / pxW) * 100;
+    const thresholdY = (thresholdPx / pxH) * 100;
+    const xGuides: number[] = [];
+    const yGuides: number[] = [];
+
+    if (draft.canvas.snapToGuides) {
+      if (draft.canvas.showEdgeGuides) {
+        xGuides.push(0, 100);
+        yGuides.push(0, 100);
+      }
+      if (draft.canvas.showCenterGuides) {
+        xGuides.push(50);
+        yGuides.push(50);
+      }
+    }
+
+    if (draft.canvas.snapToBlocks) {
+      draft.blocks.forEach(other => {
+        if (other.id === cellId || other.content.kind === 'empty') return;
+        const rect = getDefaultLayout(other);
+        xGuides.push(rect.x, rect.x + rect.width / 2, rect.x + rect.width);
+        yGuides.push(rect.y, rect.y + rect.height / 2, rect.y + rect.height);
+      });
+    }
+
+    if (draft.canvas.snapToGrid) {
+      const columns = Math.max(1, draft.canvas.gridColumns);
+      const rows = Math.max(1, draft.canvas.gridRows);
+      for (let column = 0; column <= columns; column += 1) {
+        xGuides.push((column / columns) * 100);
+      }
+      for (let row = 0; row <= rows; row += 1) {
+        yGuides.push((row / rows) * 100);
+      }
+    }
+
     let nextX = layout.x;
     let nextY = layout.y;
     let guideX: number | undefined;
     let guideY: number | undefined;
     let bestX = thresholdX + 1;
     let bestY = thresholdY + 1;
+
     for (const guide of xGuides) {
       for (const candidate of [guide, guide - layout.width / 2, guide - layout.width]) {
         const distance = Math.abs(layout.x - candidate);
@@ -475,7 +521,7 @@ export default function Frame360EditorModal({
         }
       }
     }
-    setGuides({ x: guideX, y: guideY });
+    setGuides(draft.canvas.showGuides ? { x: guideX, y: guideY } : {});
     return { ...layout, x: nextX, y: nextY };
   };
 
@@ -941,10 +987,10 @@ export default function Frame360EditorModal({
           { width, height },
         ]}
       >
-        {!preview && guides.x != null ? (
+        {!preview && draft.canvas.showGuides && guides.x != null ? (
           <View pointerEvents="none" style={[styles.guideVertical, { left: (guides.x / 100) * width }]} />
         ) : null}
-        {!preview && guides.y != null ? (
+        {!preview && draft.canvas.showGuides && guides.y != null ? (
           <View pointerEvents="none" style={[styles.guideHorizontal, { top: (guides.y / 100) * height }]} />
         ) : null}
         {draft.blocks.filter(cell => cell.content.kind !== 'empty' || Boolean(cell.targetNodeId)).map(cell => {
