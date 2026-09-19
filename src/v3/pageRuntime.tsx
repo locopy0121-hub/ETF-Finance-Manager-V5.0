@@ -74,9 +74,10 @@ function describeVisibleNodes(
         kind: 'text',
       });
     } else if (node.type !== React.Fragment) {
+      const componentType = node.type as any;
       const rawName =
         typeof node.type === 'function'
-          ? node.type.displayName || node.type.name
+          ? componentType.displayName || componentType.name || ''
           : typeof node.type === 'string'
             ? node.type
             : '';
@@ -97,7 +98,7 @@ function nodeOverrideStyle(
   template: Frame360Template | undefined,
   nodeId: string,
   isText: boolean,
-) {
+): any {
   const cell = template?.grid.dataCells.find(item => item.targetNodeId === nodeId);
   if (!cell) return undefined;
   const style = cell.style;
