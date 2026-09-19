@@ -50,6 +50,44 @@ const COLOR_PRESETS = [
   '#FEE2E2', '#FEF9C3', '#DCFCE7', '#EFF6FF',
 ];
 
+function hslToHex(h: number, s: number, l: number) {
+  const sat = s / 100;
+  const light = l / 100;
+  const chroma = (1 - Math.abs(2 * light - 1)) * sat;
+  const x = chroma * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = light - chroma / 2;
+  let rgb: [number, number, number] = [0, 0, 0];
+  if (h < 60) rgb = [chroma, x, 0];
+  else if (h < 120) rgb = [x, chroma, 0];
+  else if (h < 180) rgb = [0, chroma, x];
+  else if (h < 240) rgb = [0, x, chroma];
+  else if (h < 300) rgb = [x, 0, chroma];
+  else rgb = [chroma, 0, x];
+  return '#' + rgb
+    .map(value => Math.round((value + m) * 255).toString(16).padStart(2, '0'))
+    .join('')
+    .toUpperCase();
+}
+
+const FULL_COLOR_PALETTE = Array.from({ length: 12 }, (_, hueIndex) =>
+  [28, 40, 52, 64, 76, 88].map(light => hslToHex(hueIndex * 30, 82, light)),
+).flat();
+
+const DATA_SOURCE_GROUPS = [
+  { group: '行情', items: [
+    ['price', '即時行情'], ['previousClose', '昨日收盤'], ['changePct', '漲跌幅'], ['volume', '成交量'],
+  ] },
+  { group: '庫存', items: [
+    ['shares', '持有股數'], ['marketValue', '目前市值'], ['currentTradeCost', '純成交成本'], ['totalPnl', '總損益'], ['totalRoi', '總報酬率'],
+  ] },
+  { group: '股息', items: [
+    ['cumulativeDividends', '累積股息'], ['pendingDividends', '待領股息'], ['annualDividend', '年度股息'],
+  ] },
+  { group: '資產', items: [
+    ['totalAssets', '總資產'], ['cashBalance', '現金資金'], ['todayPnl', '今日損益'],
+  ] },
+] as const;
+
 type EditableBlockProps = {
   cell: Frame360DataCell;
   active: boolean;
@@ -58,6 +96,7 @@ type EditableBlockProps = {
   onPress: () => void;
   onLongPress: () => void;
   onDrag: (dx: number, dy: number) => void;
+  onResize: (dx: number, dy: number) => void;
   children: React.ReactNode;
 };
 
@@ -68,18 +107,46 @@ function EditableBlock({
   onPress,
   onLongPress,
   onDrag,
+  onResize,
   children,
 }: EditableBlockProps) {
+  const lastDrag = useRef({ x: 0, y: 0 });
+  const lastResize = useRef({ x: 0, y: 0 });
   const pan = useMemo(
     () =>
       PanResponder.create({
         onMoveShouldSetPanResponder: (_event, gesture) =>
-          !locked && (Math.abs(gesture.dx) > 4 || Math.abs(gesture.dy) > 4),
-        onPanResponderRelease: (_event, gesture) => {
-          if (!locked) onDrag(gesture.dx, gesture.dy);
+          !locked && (Math.abs(gesture.dx) > 3 || Math.abs(gesture.dy) > 3),
+        onPanResponderGrant: () => {
+          lastDrag.current = { x: 0, y: 0 };
+        },
+        onPanResponderMove: (_event, gesture) => {
+          if (locked) return;
+          const dx = gesture.dx - lastDrag.current.x;
+          const dy = gesture.dy - lastDrag.current.y;
+          lastDrag.current = { x: gesture.dx, y: gesture.dy };
+          onDrag(dx, dy);
         },
       }),
     [locked, onDrag],
+  );
+  const resizePan = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => !locked,
+        onMoveShouldSetPanResponder: () => !locked,
+        onPanResponderGrant: () => {
+          lastResize.current = { x: 0, y: 0 };
+        },
+        onPanResponderMove: (_event, gesture) => {
+          if (locked) return;
+          const dx = gesture.dx - lastResize.current.x;
+          const dy = gesture.dy - lastResize.current.y;
+          lastResize.current = { x: gesture.dx, y: gesture.dy };
+          onResize(dx, dy);
+        },
+      }),
+    [locked, onResize],
   );
 
   return (
@@ -92,6 +159,9 @@ function EditableBlock({
       style={[styles.cell, style, active && styles.cellActive]}
     >
       {children}
+      {active && !locked ? (
+        <View {...resizePan.panHandlers} style={styles.resizeHandle} />
+      ) : null}
     </Pressable>
   );
 }
@@ -267,15 +337,74 @@ export default function Frame360EditorModal({
       };
     });
 
+  const snapLayout = (
+    cellId: string,
+    layout: ReturnType<typeof getDefaultLayout>,
+  ) => {
+    if (!draft) return layout;
+    const pxW = Math.max(1, draft.grid.columns * CELL_W);
+    const pxH = Math.max(1, draft.grid.rows * CELL_H);
+    const thresholdX = (6 / pxW) * 100;
+    const thresholdY = (6 / pxH) * 100;
+    const xGuides = [0, 50, 100];
+    const yGuides = [0, 50, 100];
+    draft.grid.dataCells.forEach(other => {
+      if (other.id === cellId || other.content.kind === 'empty') return;
+      const rect = getDefaultLayout(other);
+      xGuides.push(rect.x, rect.x + rect.width / 2, rect.x + rect.width);
+      yGuides.push(rect.y, rect.y + rect.height / 2, rect.y + rect.height);
+    });
+    let nextX = layout.x;
+    let nextY = layout.y;
+    let guideX: number | undefined;
+    let guideY: number | undefined;
+    let bestX = thresholdX + 1;
+    let bestY = thresholdY + 1;
+    for (const guide of xGuides) {
+      for (const candidate of [guide, guide - layout.width / 2, guide - layout.width]) {
+        const distance = Math.abs(layout.x - candidate);
+        if (distance <= thresholdX && distance < bestX) {
+          bestX = distance;
+          nextX = candidate;
+          guideX = guide;
+        }
+      }
+    }
+    for (const guide of yGuides) {
+      for (const candidate of [guide, guide - layout.height / 2, guide - layout.height]) {
+        const distance = Math.abs(layout.y - candidate);
+        if (distance <= thresholdY && distance < bestY) {
+          bestY = distance;
+          nextY = candidate;
+          guideY = guide;
+        }
+      }
+    }
+    setGuides({ x: guideX, y: guideY });
+    return { ...layout, x: nextX, y: nextY };
+  };
+
   const dragBlock = (cellId: string, dx: number, dy: number) =>
     updateBlockLayout(cellId, layout => {
       const pxW = Math.max(1, draft!.grid.columns * CELL_W);
       const pxH = Math.max(1, draft!.grid.rows * CELL_H);
-      return {
+      return snapLayout(cellId, {
         ...layout,
         x: layout.x + (dx / pxW) * 100,
         y: layout.y + (dy / pxH) * 100,
-      };
+        editorUnit: 'px',
+      });
+    });
+
+  const resizeBlock = (cellId: string, dx: number, dy: number) =>
+    updateBlockLayout(cellId, layout => {
+      const pxW = Math.max(1, draft!.grid.columns * CELL_W);
+      const pxH = Math.max(1, draft!.grid.rows * CELL_H);
+      const width = layout.width + (dx / pxW) * 100;
+      const height = layout.lockAspectRatio
+        ? width * (layout.height / Math.max(layout.width, 0.001))
+        : layout.height + (dy / pxH) * 100;
+      return snapLayout(cellId, { ...layout, width, height, editorUnit: 'px' });
     });
 
   const setLayer = (cellId: string, action: 'up' | 'down' | 'top' | 'bottom') => {
@@ -569,6 +698,12 @@ export default function Frame360EditorModal({
           { width, height },
         ]}
       >
+        {!preview && guides.x != null ? (
+          <View pointerEvents="none" style={[styles.guideVertical, { left: (guides.x / 100) * width }]} />
+        ) : null}
+        {!preview && guides.y != null ? (
+          <View pointerEvents="none" style={[styles.guideHorizontal, { top: (guides.y / 100) * height }]} />
+        ) : null}
         {draft.grid.dataCells.filter(cell => cell.content.kind !== 'empty' || Boolean(cell.targetNodeId)).map(cell => {
           const active = !preview && selected.includes(cell.id);
           const layout = getDefaultLayout(cell);
@@ -598,6 +733,7 @@ export default function Frame360EditorModal({
               onPress={() => handleCellPress(cell)}
               onLongPress={() => handleCellLongPress(cell)}
               onDrag={(dx, dy) => dragBlock(cell.id, dx, dy)}
+              onResize={(dx, dy) => resizeBlock(cell.id, dx, dy)}
               style={[
                 baseStyle,
                 preview && styles.previewCell,
@@ -1767,6 +1903,33 @@ const styles = StyleSheet.create({
   lockButton: { backgroundColor: '#0F172A' },
   lockButtonText: { color: '#FFFFFF' },
   cellLocked: { opacity: 0.72 },
+  resizeHandle: {
+    position: 'absolute',
+    right: 2,
+    bottom: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 4,
+    backgroundColor: '#0066FF',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  guideVertical: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: '#F43F5E',
+    zIndex: 9999,
+  },
+  guideHorizontal: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: '#F43F5E',
+    zIndex: 9999,
+  },
   previewScaleRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
