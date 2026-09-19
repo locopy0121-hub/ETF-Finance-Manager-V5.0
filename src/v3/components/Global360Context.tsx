@@ -103,7 +103,7 @@ export function Global360Provider({
   children: React.ReactNode;
 }) {
   const [active, setActive] = useState<ActiveEdit | null>(null);
-  // V5.0.5: Settings owns the single 360 switch. Per-page "設定模式" flags are legacy
+  // V5.0.5: Settings owns the single 360 switch. Per-page "設定模式" flags are compatibility
   // state only and must not activate the editor.
   const enabled = Boolean(prefs.globalEditMode);
 
