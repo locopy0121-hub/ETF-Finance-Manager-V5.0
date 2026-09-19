@@ -35,7 +35,7 @@ describe('360 reminder cell', () => {
     );
 
     expect(result.visible).toBe(false);
-    expect(grid.dataCells).toHaveLength(1);
+    expect(grid.dataCells.length).toBe(1);
     expect(grid.dataCells[0].content.kind).toBe('reminder');
   });
 });
