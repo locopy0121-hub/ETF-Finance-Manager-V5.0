@@ -792,6 +792,137 @@ export default function Frame360EditorModal({
                   </Pressable>
                 </View>
 
+                <Text style={styles.deepLabel}>特效</Text>
+                <View style={styles.choiceWrap}>
+                  {([
+                    ['none', '無'],
+                    ['breathe', '呼吸'],
+                    ['blink', '閃爍'],
+                    ['jump', '跳動'],
+                    ['fade', '淡入淡出'],
+                    ['pulse', '脈衝'],
+                  ] as const).map(([effect, label]) => (
+                    <Pressable
+                      key={effect}
+                      onPress={() =>
+                        replaceCell(deepCell.id, cell => ({
+                          ...cell,
+                          style: { ...cell.style, effect },
+                        }))
+                      }
+                      style={[
+                        styles.choice,
+                        (deepCell.style.effect ?? 'none') === effect && styles.choiceActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.choiceText,
+                          (deepCell.style.effect ?? 'none') === effect && styles.choiceTextActive,
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <Text style={styles.deepLabel}>外距</Text>
+                <TextInput
+                  keyboardType="number-pad"
+                  value={String(deepCell.style.margin ?? 0)}
+                  onChangeText={value =>
+                    replaceCell(deepCell.id, cell => ({
+                      ...cell,
+                      style: {
+                        ...cell.style,
+                        margin: Math.max(0, Math.min(32, Number(value) || 0)),
+                      },
+                    }))
+                  }
+                  style={styles.deepInput}
+                />
+
+                <Text style={styles.deepLabel}>字距</Text>
+                <TextInput
+                  keyboardType="decimal-pad"
+                  value={String(deepCell.style.letterSpacing ?? 0)}
+                  onChangeText={value =>
+                    replaceCell(deepCell.id, cell => ({
+                      ...cell,
+                      style: {
+                        ...cell.style,
+                        letterSpacing: Math.max(-2, Math.min(12, Number(value) || 0)),
+                      },
+                    }))
+                  }
+                  style={styles.deepInput}
+                />
+
+                <Text style={styles.deepLabel}>行高</Text>
+                <TextInput
+                  keyboardType="number-pad"
+                  value={String(deepCell.style.lineHeight ?? 16)}
+                  onChangeText={value =>
+                    replaceCell(deepCell.id, cell => ({
+                      ...cell,
+                      style: {
+                        ...cell.style,
+                        lineHeight: Math.max(8, Math.min(64, Number(value) || 16)),
+                      },
+                    }))
+                  }
+                  style={styles.deepInput}
+                />
+
+                <Text style={styles.deepLabel}>陰影透明度</Text>
+                <TextInput
+                  keyboardType="decimal-pad"
+                  value={String(deepCell.style.shadowOpacity ?? 0)}
+                  onChangeText={value =>
+                    replaceCell(deepCell.id, cell => ({
+                      ...cell,
+                      style: {
+                        ...cell.style,
+                        shadowOpacity: Math.max(0, Math.min(1, Number(value) || 0)),
+                      },
+                    }))
+                  }
+                  style={styles.deepInput}
+                />
+
+                <Text style={styles.deepLabel}>陰影模糊</Text>
+                <TextInput
+                  keyboardType="number-pad"
+                  value={String(deepCell.style.shadowRadius ?? 0)}
+                  onChangeText={value =>
+                    replaceCell(deepCell.id, cell => ({
+                      ...cell,
+                      style: {
+                        ...cell.style,
+                        shadowRadius: Math.max(0, Math.min(40, Number(value) || 0)),
+                      },
+                    }))
+                  }
+                  style={styles.deepInput}
+                />
+
+                <Text style={styles.deepLabel}>Android Elevation</Text>
+                <TextInput
+                  keyboardType="number-pad"
+                  value={String(deepCell.style.elevation ?? 0)}
+                  onChangeText={value =>
+                    replaceCell(deepCell.id, cell => ({
+                      ...cell,
+                      style: {
+                        ...cell.style,
+                        elevation: Math.max(0, Math.min(24, Number(value) || 0)),
+                      },
+                    }))
+                  }
+                  style={styles.deepInput}
+                />
+
                 <Text style={styles.deepLabel}>文字色</Text>
                 <TextInput
                   value={deepCell.style.textColor ?? ''}
