@@ -213,7 +213,7 @@ export function PortfolioScreen({
         price: editingHoldingRow.view.price,
         shares: editingHoldingRow.view.shares,
         marketValue: editingHoldingRow.view.marketValue,
-        currentTradeCost: editingHoldingRow.view.currentTradeCost,
+        currentTradeCost: editingHoldingRow.view.pureCost,
         totalPnl: editingHoldingRow.view.cashPnl,
         totalRoi: editingHoldingRow.view.cashRoi,
         cashPnl: editingHoldingRow.view.cashPnl,
