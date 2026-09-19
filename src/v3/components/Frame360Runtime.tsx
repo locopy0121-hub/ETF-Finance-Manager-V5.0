@@ -432,7 +432,7 @@ function RuntimeCellSurface({
             <View
               pointerEvents="none"
               style={[
-                StyleSheet.absoluteFillObject,
+                StyleSheet.absoluteFill,
                 {
                   backgroundColor: cell.style.backgroundOverlayColor,
                   opacity: (cell.style.backgroundOverlayOpacity ?? 0) / 100,
