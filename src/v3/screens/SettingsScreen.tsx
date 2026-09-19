@@ -657,12 +657,12 @@ export function PageFrameEditorModal({
 
           <View style={styles.editorHeader}>
             <View style={styles.editorHeaderText}>
-              <Text style={styles.editorEyebrow}>PAGE FRAME EDITOR 2.0</Text>
+              <Text style={styles.editorEyebrow}>360 框架編輯器</Text>
               <Text style={styles.editorTitle}>
                 {card?.title ?? '卡片編輯器'}
               </Text>
               <Text style={styles.editorSubtitle}>
-                {page} · 純 UI / Layout 設定
+                {page} · 純介面／版面設定
               </Text>
             </View>
 
@@ -1548,20 +1548,12 @@ export function SettingsScreen({
                         />
                       )}
                       {card.role !== 'module' ? (
-                        <>
-                          <Pressable
-                            onPress={() => open360Frame(card)}
-                            style={styles.gearButton}
-                          >
-                            <Text style={styles.gearText}>360</Text>
-                          </Pressable>
-                          <Pressable
-                            onPress={() => setEditingCardId(card.id)}
-                            style={styles.gearButton}
-                          >
-                            <Text style={styles.gearText}>⚙️</Text>
-                          </Pressable>
-                        </>
+                        <Pressable
+                          onPress={() => open360Frame(card)}
+                          style={styles.gearButton}
+                        >
+                          <Text style={styles.gearText}>360</Text>
+                        </Pressable>
                       ) : null}
                     </View>
                   ))}
@@ -2289,13 +2281,6 @@ export function SettingsScreen({
         onSave={save360Frame}
       />
 
-      <PageFrameEditorModal
-        visible={!!editingCard}
-        page={selectedPage}
-        card={editingCard}
-        onClose={() => setEditingCardId(null)}
-        onSave={saveFrame}
-      />
     </ScrollView>
     </FontScaleScope>
   );
