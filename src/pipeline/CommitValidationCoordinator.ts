@@ -1,7 +1,7 @@
 import type { FrozenDraftSnapshot, PipelineValidationResult } from '../types/pipeline';
 import type { IProductionConfigReadPort } from '../governance/ProductionConfigStore';
 import type { IDiagnosticObservationPort } from '../types/diagnostic';
-import { GovernanceCommitPreparationPort } from '../governance/GovernanceCommitPreparationPort';
+import type { IGovernanceCommitPreparationPort } from '../governance/GovernanceCommitPreparationPort';
 import { computeCanonicalFingerprint } from '../governance/CanonicalFingerprint';
 
 export type MigrationResult =
@@ -21,7 +21,7 @@ export interface ICommitGuardValidator {
 
 export class CommitValidationCoordinator {
   constructor(
-    private governancePrepPort: GovernanceCommitPreparationPort,
+    private governancePrepPort: IGovernanceCommitPreparationPort,
     private productionReadPort: IProductionConfigReadPort,
     private diagnosticPort: IDiagnosticObservationPort,
     private migrationPort: IMigrationCoordinatorPort,
