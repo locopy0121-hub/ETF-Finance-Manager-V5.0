@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Modal,
+  PanResponder,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -40,6 +41,58 @@ const CELL_W = 72;
 const CELL_H = 58;
 const PREVIEW_W = 46;
 const PREVIEW_H = 38;
+const COLOR_PRESETS = [
+  '#0F172A', '#334155', '#64748B', '#FFFFFF',
+  '#0066FF', '#38BDF8', '#7C3AED', '#EC4899',
+  '#DC2626', '#F97316', '#CA8A04', '#16A34A',
+  '#FEE2E2', '#FEF9C3', '#DCFCE7', '#EFF6FF',
+];
+
+type EditableBlockProps = {
+  cell: Frame360DataCell;
+  active: boolean;
+  locked: boolean;
+  style: any;
+  onPress: () => void;
+  onLongPress: () => void;
+  onDrag: (dx: number, dy: number) => void;
+  children: React.ReactNode;
+};
+
+function EditableBlock({
+  active,
+  locked,
+  style,
+  onPress,
+  onLongPress,
+  onDrag,
+  children,
+}: EditableBlockProps) {
+  const pan = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_event, gesture) =>
+          !locked && (Math.abs(gesture.dx) > 4 || Math.abs(gesture.dy) > 4),
+        onPanResponderRelease: (_event, gesture) => {
+          if (!locked) onDrag(gesture.dx, gesture.dy);
+        },
+      }),
+    [locked, onDrag],
+  );
+
+  return (
+    <Pressable
+      {...pan.panHandlers}
+      disabled={locked}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={380}
+      style={[styles.cell, style, active && styles.cellActive]}
+    >
+      {children}
+    </Pressable>
+  );
+}
 
 const cloneTemplate = (template: Frame360Template): Frame360Template =>
   JSON.parse(JSON.stringify(template)) as Frame360Template;
@@ -72,6 +125,8 @@ export default function Frame360EditorModal({
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [rowsText, setRowsText] = useState('2');
   const [columnsText, setColumnsText] = useState('5');
+  const [previewScale, setPreviewScale] = useState(100);
+  const [editorLocked, setEditorLocked] = useState(Boolean(template?.locked));
 
   useEffect(() => {
     if (!visible || !template) return;
@@ -82,6 +137,8 @@ export default function Frame360EditorModal({
     setMultiSelectMode(false);
     setRowsText(String(template.grid.rows));
     setColumnsText(String(template.grid.columns));
+    setPreviewScale(100);
+    setEditorLocked(Boolean(template.locked));
   }, [visible, template?.id, template?.version]);
 
   const selectedCells = useMemo(
@@ -102,10 +159,14 @@ export default function Frame360EditorModal({
         .filter(cell => cell.content.kind === 'data')
         .map(cell => {
           const content = cell.content.kind === 'data' ? cell.content : null;
-          return [
-            content?.binding ?? '',
-            cell.nodeLabel ?? content?.label ?? content?.binding ?? '預覽',
-          ];
+          const key = content?.binding ?? '';
+          const lower = key.toLowerCase();
+          const sample =
+            lower.includes('pnl') || lower.includes('profit') ? 169 :
+            lower.includes('roi') || lower.includes('percent') ? 1.52 :
+            lower.includes('count') || lower.includes('share') ? 32 :
+            5754;
+          return [key, sample];
         })
         .filter(([key]) => Boolean(key)),
     );
@@ -130,6 +191,148 @@ export default function Frame360EditorModal({
       };
     });
   };
+
+
+  const getDefaultLayout = (cell: Frame360DataCell) => ({
+    mode: 'free' as const,
+    x: ((cell.columnStart - 1) / draft!.grid.columns) * 100,
+    y: ((cell.rowStart - 1) / draft!.grid.rows) * 100,
+    width: (cell.columnSpan / draft!.grid.columns) * 100,
+    height: (cell.rowSpan / draft!.grid.rows) * 100,
+    minWidth: 4,
+    minHeight: 4,
+    maxWidth: 100,
+    maxHeight: 100,
+    lockAspectRatio: false,
+    locked: false,
+    zIndex: 0,
+    nudgeStep: 1,
+    ...cell.layout,
+  });
+
+  const rectsOverlap = (a: any, b: any) =>
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y;
+
+  const updateBlockLayout = (
+    cellId: string,
+    updater: (layout: ReturnType<typeof getDefaultLayout>) => ReturnType<typeof getDefaultLayout>,
+  ) => {
+    if (editorLocked || !draft) return;
+    setDraft(current => {
+      if (!current) return current;
+      const target = current.grid.dataCells.find(cell => cell.id === cellId);
+      if (!target || target.layout?.locked) return current;
+      const base = getDefaultLayout(target);
+      const next = updater(base);
+      const normalized = {
+        ...next,
+        x: Math.max(0, Math.min(100 - next.width, next.x)),
+        y: Math.max(0, Math.min(100 - next.height, next.y)),
+        width: Math.max(next.minWidth ?? 4, Math.min(next.maxWidth ?? 100, next.width)),
+        height: Math.max(next.minHeight ?? 4, Math.min(next.maxHeight ?? 100, next.height)),
+      };
+      if (!current.allowOverlap) {
+        const collision = current.grid.dataCells.some(other => {
+          if (other.id === cellId || other.content.kind === 'empty') return false;
+          return rectsOverlap(normalized, getDefaultLayout(other));
+        });
+        if (collision) return current;
+      }
+      return {
+        ...current,
+        grid: {
+          ...current.grid,
+          dataCells: current.grid.dataCells.map(cell =>
+            cell.id === cellId ? { ...cell, layout: normalized } : cell,
+          ),
+        },
+      };
+    });
+  };
+
+  const nudgeBlock = (cellId: string, dx: number, dy: number) =>
+    updateBlockLayout(cellId, layout => {
+      const step = layout.nudgeStep ?? 1;
+      const pxW = Math.max(1, draft!.grid.columns * CELL_W);
+      const pxH = Math.max(1, draft!.grid.rows * CELL_H);
+      return {
+        ...layout,
+        x: layout.x + (dx * step / pxW) * 100,
+        y: layout.y + (dy * step / pxH) * 100,
+      };
+    });
+
+  const dragBlock = (cellId: string, dx: number, dy: number) =>
+    updateBlockLayout(cellId, layout => {
+      const pxW = Math.max(1, draft!.grid.columns * CELL_W);
+      const pxH = Math.max(1, draft!.grid.rows * CELL_H);
+      return {
+        ...layout,
+        x: layout.x + (dx / pxW) * 100,
+        y: layout.y + (dy / pxH) * 100,
+      };
+    });
+
+  const setLayer = (cellId: string, action: 'up' | 'down' | 'top' | 'bottom') => {
+    if (!draft || editorLocked) return;
+    const zValues = draft.grid.dataCells.map(cell => cell.layout?.zIndex ?? 0);
+    const min = Math.min(0, ...zValues);
+    const max = Math.max(0, ...zValues);
+    updateBlockLayout(cellId, layout => ({
+      ...layout,
+      zIndex:
+        action === 'top' ? max + 1 :
+        action === 'bottom' ? min - 1 :
+        action === 'up' ? (layout.zIndex ?? 0) + 1 :
+        (layout.zIndex ?? 0) - 1,
+    }));
+  };
+
+  const renderColorPalette = (
+    label: string,
+    field: 'textColor' | 'textBackgroundColor' | 'backgroundColor' | 'borderColor',
+  ) => (
+    <>
+      <Text style={styles.deepLabel}>{label}</Text>
+      <View style={styles.paletteRow}>
+        {COLOR_PRESETS.map(color => (
+          <Pressable
+            key={color}
+            accessibilityLabel={color}
+            onPress={() =>
+              deepCell &&
+              !editorLocked &&
+              replaceCell(deepCell.id, cell => ({
+                ...cell,
+                style: { ...cell.style, [field]: color },
+              }))
+            }
+            style={[
+              styles.colorSwatch,
+              { backgroundColor: color },
+              deepCell?.style[field] === color && styles.colorSwatchActive,
+            ]}
+          />
+        ))}
+      </View>
+      <TextInput
+        editable={!editorLocked}
+        value={(deepCell?.style[field] as string | undefined) ?? ''}
+        onChangeText={value =>
+          deepCell &&
+          replaceCell(deepCell.id, cell => ({
+            ...cell,
+            style: { ...cell.style, [field]: value },
+          }))
+        }
+        placeholder="#RRGGBB / transparent"
+        style={styles.deepInput}
+      />
+    </>
+  );
 
   const applyType = (kind: Frame360CellKind) => {
     if (selected.length !== 1) return;
@@ -264,6 +467,7 @@ export default function Frame360EditorModal({
   };
 
   const handleCellPress = (cell: Frame360DataCell) => {
+    if (editorLocked || cell.layout?.locked) return;
     if (multiSelectMode) {
       setSelected(current =>
         current.includes(cell.id)
@@ -277,6 +481,7 @@ export default function Frame360EditorModal({
   };
 
   const handleCellLongPress = (cell: Frame360DataCell) => {
+    if (editorLocked || cell.layout?.locked) return;
     setSelected([cell.id]);
     setMultiSelectMode(false);
     setDeepCellId(cell.id);
@@ -285,9 +490,9 @@ export default function Frame360EditorModal({
 
   const cellPreviewText = (cell: Frame360DataCell) => {
     if (cell.content.kind === 'text') return cell.content.text;
-    if (cell.content.kind === 'data') return cell.content.label ?? cell.content.binding;
+    if (cell.content.kind === 'data') return cell.content.label ?? cell.nodeLabel ?? '資料';
     if (cell.content.kind === 'icon') return cell.content.icon;
-    if (cell.content.kind === 'chart') return cell.content.binding;
+    if (cell.content.kind === 'chart') return cell.nodeLabel ?? '圖表';
     if (cell.content.kind === 'reminder') return cell.content.activeLabel;
     if (cell.content.kind === 'component') {
       return frame360ComponentLabel(cell.content.component);
@@ -312,24 +517,37 @@ export default function Frame360EditorModal({
       >
         {draft.grid.dataCells.map(cell => {
           const active = !preview && selected.includes(cell.id);
+          const layout = getDefaultLayout(cell);
+          const baseStyle = cell.layout?.mode === 'free'
+            ? {
+                position: 'absolute' as const,
+                left: (layout.x / 100) * width,
+                top: (layout.y / 100) * height,
+                width: (layout.width / 100) * width,
+                height: (layout.height / 100) * height,
+                zIndex: layout.zIndex ?? 0,
+              }
+            : {
+                position: 'absolute' as const,
+                left: (cell.columnStart - 1) * unitW,
+                top: (cell.rowStart - 1) * unitH,
+                width: cell.columnSpan * unitW,
+                height: cell.rowSpan * unitH,
+                zIndex: cell.layout?.zIndex ?? 0,
+              };
           return (
-            <Pressable
+            <EditableBlock
               key={cell.id}
-              disabled={preview}
+              cell={cell}
+              active={active}
+              locked={preview || editorLocked || Boolean(cell.layout?.locked)}
               onPress={() => handleCellPress(cell)}
               onLongPress={() => handleCellLongPress(cell)}
-              delayLongPress={380}
+              onDrag={(dx, dy) => dragBlock(cell.id, dx, dy)}
               style={[
-                styles.cell,
-                {
-                  position: 'absolute',
-                  left: (cell.columnStart - 1) * unitW,
-                  top: (cell.rowStart - 1) * unitH,
-                  width: cell.columnSpan * unitW,
-                  height: cell.rowSpan * unitH,
-                },
+                baseStyle,
                 preview && styles.previewCell,
-                active && styles.cellActive,
+                cell.layout?.locked && styles.cellLocked,
               ]}
             >
               <Text
@@ -341,10 +559,9 @@ export default function Frame360EditorModal({
               {!preview ? (
                 <>
                   <Text style={styles.cellMeta}>
-                    {cell.rowStart}-{cell.columnStart}
-                    {cell.rowSpan > 1 || cell.columnSpan > 1
-                      ? ` · ${cell.columnSpan}×${cell.rowSpan}`
-                      : ''}
+                    {cell.layout?.mode === 'free'
+                      ? `自由 · Z${cell.layout?.zIndex ?? 0}`
+                      : `${cell.rowStart}-${cell.columnStart}${cell.rowSpan > 1 || cell.columnSpan > 1 ? ` · ${cell.columnSpan}×${cell.rowSpan}` : ''}`}
                   </Text>
                   {cell.content.kind !== 'empty' ? (
                     <Text numberOfLines={1} style={styles.cellPreview}>
@@ -353,7 +570,7 @@ export default function Frame360EditorModal({
                   ) : null}
                 </>
               ) : null}
-            </Pressable>
+            </EditableBlock>
           );
         })}
       </View>
@@ -388,6 +605,23 @@ export default function Frame360EditorModal({
           </View>
 
           <View style={styles.toolbar}>
+            <Pressable
+              onPress={() => setEditorLocked(value => !value)}
+              style={[styles.toolButton, editorLocked && styles.lockButton]}
+            >
+              <Text style={[styles.toolText, editorLocked && styles.lockButtonText]}>
+                {editorLocked ? '🔒 解鎖編輯' : '🔓 編輯中'}
+              </Text>
+            </Pressable>
+            <Pressable
+              disabled={editorLocked}
+              onPress={() => setDraft(current => current ? { ...current, allowOverlap: !current.allowOverlap } : current)}
+              style={[styles.toolButton, draft.allowOverlap && styles.toolButtonActive, editorLocked && styles.disabled]}
+            >
+              <Text style={[styles.toolText, draft.allowOverlap && styles.toolTextActive]}>
+                {draft.allowOverlap ? '自由圖層 ON' : 'ZERO OVERLAP'}
+              </Text>
+            </Pressable>
             <Pressable onPress={() => setGridDialog(true)} style={styles.toolButton}>
               <Text style={styles.toolText}>新增格線</Text>
             </Pressable>
@@ -421,8 +655,29 @@ export default function Frame360EditorModal({
           <View style={styles.previewPanel}>
             <View style={styles.previewHeader}>
               <Text style={styles.previewTitle}>即時預覽框</Text>
-              <Text style={styles.previewHint}>與正式格線共用同一份 Draft</Text>
+              <Text style={styles.previewHint}>實際內容預覽 · {previewScale}%</Text>
             </View>
+            <View style={styles.previewScaleRow}>
+              {[50, 75, 100, 125, 150].map(scale => (
+                <Pressable
+                  key={scale}
+                  onPress={() => setPreviewScale(scale)}
+                  style={[styles.scaleButton, previewScale === scale && styles.scaleButtonActive]}
+                >
+                  <Text style={[styles.scaleText, previewScale === scale && styles.scaleTextActive]}>
+                    {scale}%
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={{ height: Math.max(80, 160 * previewScale / 100), overflow: 'hidden' }}>
+              <View
+                style={{
+                  width: `${10000 / previewScale}%`,
+                  transform: [{ scale: previewScale / 100 }],
+                  transformOrigin: 'top left',
+                }}
+              >
             <Frame360Runtime
               template={draft}
               data={previewData}
@@ -435,10 +690,12 @@ export default function Frame360EditorModal({
               }}
               minHeight={160}
             />
+              </View>
+            </View>
           </View>
 
           <Text style={styles.gestureHint}>
-            單點：選擇資料格類型　·　長按：進入 360 深度功能
+            單點：選擇方塊類型　·　長按：完整編輯　·　拖曳：自由移動
           </Text>
 
           <ScrollView
@@ -462,13 +719,14 @@ export default function Frame360EditorModal({
               onPress={() =>
                 onSave({
                   ...draft,
+                  locked: true,
                   version: draft.version + 1,
                   updatedAt: Date.now(),
                 })
               }
               style={styles.primaryButton}
             >
-              <Text style={styles.primaryText}>儲存框架</Text>
+              <Text style={styles.primaryText}>儲存並上鎖</Text>
             </Pressable>
           </View>
         </View>
@@ -477,7 +735,7 @@ export default function Frame360EditorModal({
       <Modal visible={gridDialog} transparent animationType="fade">
         <View style={styles.backdrop}>
           <View style={[styles.dialog, { paddingBottom: Math.max(18, insets.bottom + 12) }]}>
-            <Text style={styles.dialogTitle}>新增儲存格格線</Text>
+            <Text style={styles.dialogTitle}>新增方塊格線</Text>
             <Text style={styles.dialogHint}>輸入欄 × 列，例如 8 × 4。</Text>
             <View style={styles.inputRow}>
               <TextInput
@@ -509,7 +767,7 @@ export default function Frame360EditorModal({
       <Modal visible={typeDialog} transparent animationType="fade">
         <View style={styles.backdrop}>
           <View style={[styles.dialog, { paddingBottom: Math.max(18, insets.bottom + 12) }]}>
-            <Text style={styles.dialogTitle}>選擇資料格類型</Text>
+            <Text style={styles.dialogTitle}>選擇方塊類型</Text>
             <ScrollView>
               {FRAME360_CELL_TYPES.filter(item => item.kind !== 'empty').map(item => (
                 <Pressable
@@ -540,7 +798,7 @@ export default function Frame360EditorModal({
             <Text style={styles.dialogTitle}>360 深度功能</Text>
             <Text style={styles.dialogHint}>
               {deepCell
-                ? `${deepCell.rowStart}-${deepCell.columnStart} · ${frame360CellTypeLabel(
+                ? `${cellPreviewText(deepCell)} · ${frame360CellTypeLabel(
                     deepCell.content.kind,
                   )}`
                 : ''}
@@ -551,6 +809,82 @@ export default function Frame360EditorModal({
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={styles.deepBody}
               >
+                <Text style={styles.sectionTitle}>方塊位置與尺寸</Text>
+                <View style={styles.choiceWrap}>
+                  <Pressable
+                    onPress={() => updateBlockLayout(deepCell.id, layout => ({ ...layout, mode: 'free' }))}
+                    style={[styles.choice, deepCell.layout?.mode === 'free' && styles.choiceActive]}
+                  >
+                    <Text style={styles.choiceText}>自由方塊</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => replaceCell(deepCell.id, cell => ({ ...cell, layout: { ...cell.layout, mode: 'grid' } }))}
+                    style={[styles.choice, deepCell.layout?.mode !== 'free' && styles.choiceActive]}
+                  >
+                    <Text style={styles.choiceText}>格線定位</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => updateBlockLayout(deepCell.id, layout => ({ ...layout, locked: !layout.locked }))}
+                    style={[styles.choice, deepCell.layout?.locked && styles.choiceActive]}
+                  >
+                    <Text style={styles.choiceText}>{deepCell.layout?.locked ? '🔒 方塊已鎖' : '🔓 鎖定方塊'}</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.sizeRow}>
+                  <View style={styles.sizeField}>
+                    <Text style={styles.deepLabel}>寬度 %</Text>
+                    <TextInput
+                      editable={!editorLocked && !deepCell.layout?.locked}
+                      keyboardType="decimal-pad"
+                      value={String(Math.round(getDefaultLayout(deepCell).width * 10) / 10)}
+                      onChangeText={value => updateBlockLayout(deepCell.id, layout => ({ ...layout, width: Number(value) || layout.width }))}
+                      style={styles.deepInput}
+                    />
+                  </View>
+                  <View style={styles.sizeField}>
+                    <Text style={styles.deepLabel}>高度 %</Text>
+                    <TextInput
+                      editable={!editorLocked && !deepCell.layout?.locked}
+                      keyboardType="decimal-pad"
+                      value={String(Math.round(getDefaultLayout(deepCell).height * 10) / 10)}
+                      onChangeText={value => updateBlockLayout(deepCell.id, layout => ({ ...layout, height: Number(value) || layout.height }))}
+                      style={styles.deepInput}
+                    />
+                  </View>
+                </View>
+
+                <Text style={styles.deepLabel}>位置微調</Text>
+                <View style={styles.nudgePad}>
+                  <Pressable style={styles.nudgeButton} onPress={() => nudgeBlock(deepCell.id, 0, -1)}><Text style={styles.nudgeText}>↑</Text></Pressable>
+                  <View style={styles.nudgeMiddle}>
+                    <Pressable style={styles.nudgeButton} onPress={() => nudgeBlock(deepCell.id, -1, 0)}><Text style={styles.nudgeText}>←</Text></Pressable>
+                    <Text style={styles.stepValue}>{getDefaultLayout(deepCell).nudgeStep ?? 1}px</Text>
+                    <Pressable style={styles.nudgeButton} onPress={() => nudgeBlock(deepCell.id, 1, 0)}><Text style={styles.nudgeText}>→</Text></Pressable>
+                  </View>
+                  <Pressable style={styles.nudgeButton} onPress={() => nudgeBlock(deepCell.id, 0, 1)}><Text style={styles.nudgeText}>↓</Text></Pressable>
+                </View>
+                <View style={styles.choiceWrap}>
+                  {[1, 2, 4, 8].map(step => (
+                    <Pressable
+                      key={step}
+                      onPress={() => updateBlockLayout(deepCell.id, layout => ({ ...layout, nudgeStep: step }))}
+                      style={[styles.choice, (getDefaultLayout(deepCell).nudgeStep ?? 1) === step && styles.choiceActive]}
+                    >
+                      <Text style={styles.choiceText}>{step}px</Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <Text style={styles.deepLabel}>圖層</Text>
+                <View style={styles.choiceWrap}>
+                  <Pressable style={styles.choice} onPress={() => setLayer(deepCell.id, 'top')}><Text style={styles.choiceText}>最上層</Text></Pressable>
+                  <Pressable style={styles.choice} onPress={() => setLayer(deepCell.id, 'up')}><Text style={styles.choiceText}>上移一層</Text></Pressable>
+                  <Pressable style={styles.choice} onPress={() => setLayer(deepCell.id, 'down')}><Text style={styles.choiceText}>下移一層</Text></Pressable>
+                  <Pressable style={styles.choice} onPress={() => setLayer(deepCell.id, 'bottom')}><Text style={styles.choiceText}>最下層</Text></Pressable>
+                </View>
+
+                <Text style={styles.sectionTitle}>內容與對齊</Text>
                 <Text style={styles.deepLabel}>九宮格對齊</Text>
                 <View style={styles.choiceWrap}>
                   {ALIGNMENTS.map(([key, label]) => (
@@ -923,44 +1257,46 @@ export default function Frame360EditorModal({
                   style={styles.deepInput}
                 />
 
-                <Text style={styles.deepLabel}>文字色</Text>
-                <TextInput
-                  value={deepCell.style.textColor ?? ''}
-                  onChangeText={textColor =>
-                    replaceCell(deepCell.id, cell => ({
-                      ...cell,
-                      style: { ...cell.style, textColor },
-                    }))
-                  }
-                  placeholder="#0F172A"
-                  style={styles.deepInput}
-                />
+                {renderColorPalette('文字顏色', 'textColor')}
+                {renderColorPalette('文字背景顏色', 'textBackgroundColor')}
+                {renderColorPalette('方塊背景顏色', 'backgroundColor')}
+                {renderColorPalette('邊框顏色', 'borderColor')}
 
-                <Text style={styles.deepLabel}>背景色</Text>
-                <TextInput
-                  value={deepCell.style.backgroundColor ?? ''}
-                  onChangeText={backgroundColor =>
-                    replaceCell(deepCell.id, cell => ({
-                      ...cell,
-                      style: { ...cell.style, backgroundColor },
-                    }))
-                  }
-                  placeholder="#FFFFFF / transparent"
-                  style={styles.deepInput}
-                />
-
-                <Text style={styles.deepLabel}>框線色</Text>
-                <TextInput
-                  value={deepCell.style.borderColor ?? ''}
-                  onChangeText={borderColor =>
-                    replaceCell(deepCell.id, cell => ({
-                      ...cell,
-                      style: { ...cell.style, borderColor },
-                    }))
-                  }
-                  placeholder="#E2E8F0"
-                  style={styles.deepInput}
-                />
+                <Text style={styles.deepLabel}>動態顏色來源</Text>
+                <View style={styles.choiceWrap}>
+                  {([
+                    ['fixed', '固定色'],
+                    ['theme', '主題色'],
+                    ['pnl', '損益色'],
+                    ['market', '行情狀態色'],
+                  ] as const).map(([rule, label]) => (
+                    <Pressable
+                      key={rule}
+                      onPress={() =>
+                        replaceCell(deepCell.id, cell => ({
+                          ...cell,
+                          style: {
+                            ...cell.style,
+                            textColorRule: rule,
+                            textBackgroundColorRule: rule,
+                          },
+                          content:
+                            cell.content.kind === 'data'
+                              ? { ...cell.content, colorRule: rule }
+                              : cell.content,
+                        }))
+                      }
+                      style={[
+                        styles.choice,
+                        (deepCell.content.kind === 'data'
+                          ? deepCell.content.colorRule ?? deepCell.style.textColorRule ?? 'fixed'
+                          : deepCell.style.textColorRule ?? 'fixed') === rule && styles.choiceActive,
+                      ]}
+                    >
+                      <Text style={styles.choiceText}>{label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
 
                 {deepCell.content.kind === 'text' ? (
                   <>
@@ -995,36 +1331,9 @@ export default function Frame360EditorModal({
                       style={styles.deepInput}
                     />
 
-                    <Text style={styles.deepLabel}>資料綁定</Text>
-                    <TextInput
-                      value={deepCell.content.binding}
-                      onChangeText={binding =>
-                        replaceCell(deepCell.id, cell => ({
-                          ...cell,
-                          content:
-                            cell.content.kind === 'data'
-                              ? { ...cell.content, binding }
-                              : cell.content,
-                        }))
-                      }
-                      style={styles.deepInput}
-                    />
-
-                    <Text style={styles.deepLabel}>公式 / 運算式</Text>
-                    <TextInput
-                      value={deepCell.content.formula ?? ''}
-                      onChangeText={formula =>
-                        replaceCell(deepCell.id, cell => ({
-                          ...cell,
-                          content:
-                            cell.content.kind === 'data'
-                              ? { ...cell.content, formula }
-                              : cell.content,
-                        }))
-                      }
-                      placeholder="例：marketValue-currentTradeCost"
-                      style={styles.deepInput}
-                    />
+                    <View style={styles.techHidden}>
+                      <Text style={styles.techHiddenText}>資料來源與技術識別碼已隱藏，避免內部 key 干擾版面編輯。</Text>
+                    </View>
 
                     <Text style={styles.deepLabel}>資料格式</Text>
                     <View style={styles.choiceWrap}>
@@ -1365,4 +1674,59 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
   },
+  lockButton: { backgroundColor: '#0F172A' },
+  lockButtonText: { color: '#FFFFFF' },
+  cellLocked: { opacity: 0.72 },
+  previewScaleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 8,
+  },
+  scaleButton: {
+    minHeight: 30,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingHorizontal: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scaleButtonActive: { backgroundColor: '#0066FF', borderColor: '#0066FF' },
+  scaleText: { color: '#64748B', fontSize: 9, fontWeight: '800' },
+  scaleTextActive: { color: '#FFFFFF' },
+  sectionTitle: {
+    marginTop: 4,
+    color: '#0F172A',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  sizeRow: { flexDirection: 'row', gap: 10 },
+  sizeField: { flex: 1 },
+  nudgePad: { alignItems: 'center', gap: 6 },
+  nudgeMiddle: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  nudgeButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nudgeText: { color: '#0066FF', fontSize: 21, fontWeight: '900' },
+  paletteRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  colorSwatch: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  colorSwatchActive: { borderWidth: 3, borderColor: '#0066FF' },
+  techHidden: {
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    padding: 10,
+  },
+  techHiddenText: { color: '#64748B', fontSize: 10, fontWeight: '700' },
 });
