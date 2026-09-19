@@ -71,6 +71,53 @@ function hslToHex(h: number, s: number, l: number) {
     .toUpperCase();
 }
 
+function DraftNumberInput({
+  value,
+  onCommit,
+  min,
+  max,
+  editable = true,
+  style,
+}: {
+  value: number;
+  onCommit: (value: number) => void;
+  min?: number;
+  max?: number;
+  editable?: boolean;
+  style?: any;
+}) {
+  const [draft, setDraft] = useState(String(value));
+  const [editing, setEditing] = useState(false);
+  useEffect(() => {
+    if (!editing) setDraft(String(value));
+  }, [value, editing]);
+  const commit = () => {
+    const numeric = Number(draft);
+    if (!Number.isFinite(numeric)) {
+      setDraft(String(value));
+      return;
+    }
+    const clamped = Math.max(min ?? -Infinity, Math.min(max ?? Infinity, numeric));
+    onCommit(clamped);
+    setDraft(String(clamped));
+  };
+  return (
+    <TextInput
+      editable={editable}
+      keyboardType="numbers-and-punctuation"
+      value={draft}
+      onFocus={() => setEditing(true)}
+      onChangeText={setDraft}
+      onBlur={() => {
+        setEditing(false);
+        commit();
+      }}
+      onSubmitEditing={commit}
+      style={style}
+    />
+  );
+}
+
 const DATA_SOURCE_GROUPS = [
   { group: '基本資料', items: [
     ['symbol', 'ETF 代號'], ['name', '名稱'],
@@ -1583,100 +1630,22 @@ export default function Frame360EditorModal({
                 </View>
 
                 <Text style={styles.deepLabel}>外距</Text>
-                <TextInput
-                  keyboardType="number-pad"
-                  value={String(deepCell.style.margin ?? 0)}
-                  onChangeText={value =>
-                    replaceCell(deepCell.id, cell => ({
-                      ...cell,
-                      style: {
-                        ...cell.style,
-                        margin: Math.max(0, Math.min(32, Number(value) || 0)),
-                      },
-                    }))
-                  }
-                  style={styles.deepInput}
-                />
+                <DraftNumberInput value={deepCell.style.margin ?? 0} min={0} max={32} editable={!editorLocked} onCommit={margin => replaceCell(deepCell.id, cell => ({ ...cell, style: { ...cell.style, margin } }))} style={styles.deepInput} />
 
                 <Text style={styles.deepLabel}>字距</Text>
-                <TextInput
-                  keyboardType="decimal-pad"
-                  value={String(deepCell.style.letterSpacing ?? 0)}
-                  onChangeText={value =>
-                    replaceCell(deepCell.id, cell => ({
-                      ...cell,
-                      style: {
-                        ...cell.style,
-                        letterSpacing: Math.max(-2, Math.min(12, Number(value) || 0)),
-                      },
-                    }))
-                  }
-                  style={styles.deepInput}
-                />
+                <DraftNumberInput value={deepCell.style.letterSpacing ?? 0} min={-2} max={12} editable={!editorLocked} onCommit={letterSpacing => replaceCell(deepCell.id, cell => ({ ...cell, style: { ...cell.style, letterSpacing } }))} style={styles.deepInput} />
 
                 <Text style={styles.deepLabel}>行高</Text>
-                <TextInput
-                  keyboardType="number-pad"
-                  value={String(deepCell.style.lineHeight ?? 16)}
-                  onChangeText={value =>
-                    replaceCell(deepCell.id, cell => ({
-                      ...cell,
-                      style: {
-                        ...cell.style,
-                        lineHeight: Math.max(8, Math.min(64, Number(value) || 16)),
-                      },
-                    }))
-                  }
-                  style={styles.deepInput}
-                />
+                <DraftNumberInput value={deepCell.style.lineHeight ?? 16} min={8} max={64} editable={!editorLocked} onCommit={lineHeight => replaceCell(deepCell.id, cell => ({ ...cell, style: { ...cell.style, lineHeight } }))} style={styles.deepInput} />
 
                 <Text style={styles.deepLabel}>陰影透明度</Text>
-                <TextInput
-                  keyboardType="decimal-pad"
-                  value={String(deepCell.style.shadowOpacity ?? 0)}
-                  onChangeText={value =>
-                    replaceCell(deepCell.id, cell => ({
-                      ...cell,
-                      style: {
-                        ...cell.style,
-                        shadowOpacity: Math.max(0, Math.min(1, Number(value) || 0)),
-                      },
-                    }))
-                  }
-                  style={styles.deepInput}
-                />
+                <DraftNumberInput value={deepCell.style.shadowOpacity ?? 0} min={0} max={1} editable={!editorLocked} onCommit={shadowOpacity => replaceCell(deepCell.id, cell => ({ ...cell, style: { ...cell.style, shadowOpacity } }))} style={styles.deepInput} />
 
                 <Text style={styles.deepLabel}>陰影模糊</Text>
-                <TextInput
-                  keyboardType="number-pad"
-                  value={String(deepCell.style.shadowRadius ?? 0)}
-                  onChangeText={value =>
-                    replaceCell(deepCell.id, cell => ({
-                      ...cell,
-                      style: {
-                        ...cell.style,
-                        shadowRadius: Math.max(0, Math.min(40, Number(value) || 0)),
-                      },
-                    }))
-                  }
-                  style={styles.deepInput}
-                />
+                <DraftNumberInput value={deepCell.style.shadowRadius ?? 0} min={0} max={40} editable={!editorLocked} onCommit={shadowRadius => replaceCell(deepCell.id, cell => ({ ...cell, style: { ...cell.style, shadowRadius } }))} style={styles.deepInput} />
 
                 <Text style={styles.deepLabel}>Android Elevation</Text>
-                <TextInput
-                  keyboardType="number-pad"
-                  value={String(deepCell.style.elevation ?? 0)}
-                  onChangeText={value =>
-                    replaceCell(deepCell.id, cell => ({
-                      ...cell,
-                      style: {
-                        ...cell.style,
-                        elevation: Math.max(0, Math.min(24, Number(value) || 0)),
-                      },
-                    }))
-                  }
-                  style={styles.deepInput}
-                />
+                <DraftNumberInput value={deepCell.style.elevation ?? 0} min={0} max={24} editable={!editorLocked} onCommit={elevation => replaceCell(deepCell.id, cell => ({ ...cell, style: { ...cell.style, elevation } }))} style={styles.deepInput} />
 
                 {renderColorPalette('文字顏色', 'textColor')}
                 {renderColorPalette('文字背景顏色', 'textBackgroundColor')}
@@ -1697,18 +1666,18 @@ export default function Frame360EditorModal({
                   ))}
                 </View>
                 <View style={styles.sizeRow}>
-                  <View style={styles.sizeField}><Text style={styles.deepLabel}>透明度 %</Text><TextInput editable={!editorLocked} keyboardType="decimal-pad" value={String(deepCell.style.backgroundImageOpacity??100)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundImageOpacity:Math.max(0,Math.min(100,Number(v)||0))}}))} style={styles.deepInput}/></View>
-                  <View style={styles.sizeField}><Text style={styles.deepLabel}>縮放</Text><TextInput editable={!editorLocked} keyboardType="decimal-pad" value={String(deepCell.style.backgroundImageScale??1)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundImageScale:Math.max(.1,Math.min(8,Number(v)||1))}}))} style={styles.deepInput}/></View>
+                  <View style={styles.sizeField}><Text style={styles.deepLabel}>透明度 %</Text><DraftNumberInput editable={!editorLocked} value={deepCell.style.backgroundImageOpacity??100} min={0} max={100} onCommit={backgroundImageOpacity=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundImageOpacity}}))} style={styles.deepInput}/></View>
+                  <View style={styles.sizeField}><Text style={styles.deepLabel}>縮放</Text><DraftNumberInput editable={!editorLocked} value={deepCell.style.backgroundImageScale??1} min={0.1} max={8} onCommit={backgroundImageScale=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundImageScale}}))} style={styles.deepInput}/></View>
                 </View>
                 <View style={styles.sizeRow}>
-                  <View style={styles.sizeField}><Text style={styles.deepLabel}>X 位移 px</Text><TextInput editable={!editorLocked} keyboardType="numbers-and-punctuation" value={String(deepCell.style.backgroundImageX??0)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundImageX:Math.max(-1000,Math.min(1000,Number(v)||0))}}))} style={styles.deepInput}/></View>
-                  <View style={styles.sizeField}><Text style={styles.deepLabel}>Y 位移 px</Text><TextInput editable={!editorLocked} keyboardType="numbers-and-punctuation" value={String(deepCell.style.backgroundImageY??0)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundImageY:Math.max(-1000,Math.min(1000,Number(v)||0))}}))} style={styles.deepInput}/></View>
+                  <View style={styles.sizeField}><Text style={styles.deepLabel}>X 位移 px</Text><DraftNumberInput editable={!editorLocked} value={deepCell.style.backgroundImageX??0} min={-1000} max={1000} onCommit={backgroundImageX=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundImageX}}))} style={styles.deepInput}/></View>
+                  <View style={styles.sizeField}><Text style={styles.deepLabel}>Y 位移 px</Text><DraftNumberInput editable={!editorLocked} value={deepCell.style.backgroundImageY??0} min={-1000} max={1000} onCommit={backgroundImageY=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundImageY}}))} style={styles.deepInput}/></View>
                 </View>
                 <Text style={styles.deepLabel}>旋轉角度</Text>
-                <TextInput editable={!editorLocked} keyboardType="numbers-and-punctuation" value={String(deepCell.style.backgroundImageRotation??0)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundImageRotation:Math.max(-360,Math.min(360,Number(v)||0))}}))} style={styles.deepInput}/>
+                <DraftNumberInput editable={!editorLocked} value={deepCell.style.backgroundImageRotation??0} min={-360} max={360} onCommit={backgroundImageRotation=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundImageRotation}}))} style={styles.deepInput}/>
                 {renderColorPalette('背景遮罩顏色','backgroundOverlayColor')}
                 <Text style={styles.deepLabel}>背景遮罩透明度 %</Text>
-                <TextInput editable={!editorLocked} keyboardType="decimal-pad" value={String(deepCell.style.backgroundOverlayOpacity??0)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundOverlayOpacity:Math.max(0,Math.min(100,Number(v)||0))}}))} style={styles.deepInput}/>
+                <DraftNumberInput editable={!editorLocked} value={deepCell.style.backgroundOverlayOpacity??0} min={0} max={100} onCommit={backgroundOverlayOpacity=>replaceCell(deepCell.id,c=>({...c,style:{...c.style,backgroundOverlayOpacity}}))} style={styles.deepInput}/>
                 <Text style={styles.sectionTitle}>顏色規則（互相獨立）</Text>
                 <Text style={styles.previewHint}>文字、文字背景、方塊背景與邊框各自設定，不再綁在同一個動態規則。</Text>
                 {renderColorRulePicker('文字顏色規則','textColorRule')}
@@ -1745,14 +1714,14 @@ export default function Frame360EditorModal({
                       {([['cover','填滿'],['contain','完整'],['stretch','拉伸'],['repeat','平鋪'],['original','原尺寸']] as const).map(([fit,label])=><Pressable key={fit} disabled={editorLocked} onPress={()=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,fit}:c.content}))} style={[styles.choice,((deepCell.content.kind === 'image' ? deepCell.content.fit : undefined) ?? 'cover')===fit&&styles.choiceActive,editorLocked&&styles.disabled]}><Text style={styles.choiceText}>{label}</Text></Pressable>)}
                     </View>
                     <View style={styles.sizeRow}>
-                      <View style={styles.sizeField}><Text style={styles.deepLabel}>透明度 %</Text><TextInput editable={!editorLocked} keyboardType="decimal-pad" value={String(deepCell.content.opacity??100)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,opacity:Math.max(0,Math.min(100,Number(v)||0))}:c.content}))} style={styles.deepInput}/></View>
-                      <View style={styles.sizeField}><Text style={styles.deepLabel}>縮放</Text><TextInput editable={!editorLocked} keyboardType="decimal-pad" value={String(deepCell.content.scale??1)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,scale:Math.max(.1,Math.min(8,Number(v)||1))}:c.content}))} style={styles.deepInput}/></View>
+                      <View style={styles.sizeField}><Text style={styles.deepLabel}>透明度 %</Text><DraftNumberInput editable={!editorLocked} value={deepCell.content.opacity??100} min={0} max={100} onCommit={opacity=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,opacity}:c.content}))} style={styles.deepInput}/></View>
+                      <View style={styles.sizeField}><Text style={styles.deepLabel}>縮放</Text><DraftNumberInput editable={!editorLocked} value={deepCell.content.scale??1} min={0.1} max={8} onCommit={scale=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,scale}:c.content}))} style={styles.deepInput}/></View>
                     </View>
                     <View style={styles.sizeRow}>
-                      <View style={styles.sizeField}><Text style={styles.deepLabel}>X 位移 px</Text><TextInput editable={!editorLocked} keyboardType="numbers-and-punctuation" value={String(deepCell.content.x??0)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,x:Math.max(-1000,Math.min(1000,Number(v)||0))}:c.content}))} style={styles.deepInput}/></View>
-                      <View style={styles.sizeField}><Text style={styles.deepLabel}>Y 位移 px</Text><TextInput editable={!editorLocked} keyboardType="numbers-and-punctuation" value={String(deepCell.content.y??0)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,y:Math.max(-1000,Math.min(1000,Number(v)||0))}:c.content}))} style={styles.deepInput}/></View>
+                      <View style={styles.sizeField}><Text style={styles.deepLabel}>X 位移 px</Text><DraftNumberInput editable={!editorLocked} value={deepCell.content.x??0} min={-1000} max={1000} onCommit={x=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,x}:c.content}))} style={styles.deepInput}/></View>
+                      <View style={styles.sizeField}><Text style={styles.deepLabel}>Y 位移 px</Text><DraftNumberInput editable={!editorLocked} value={deepCell.content.y??0} min={-1000} max={1000} onCommit={y=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,y}:c.content}))} style={styles.deepInput}/></View>
                     </View>
-                    <Text style={styles.deepLabel}>旋轉角度</Text><TextInput editable={!editorLocked} keyboardType="numbers-and-punctuation" value={String(deepCell.content.rotation??0)} onChangeText={v=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,rotation:Math.max(-360,Math.min(360,Number(v)||0))}:c.content}))} style={styles.deepInput}/>
+                    <Text style={styles.deepLabel}>旋轉角度</Text><DraftNumberInput editable={!editorLocked} value={deepCell.content.rotation??0} min={-360} max={360} onCommit={rotation=>replaceCell(deepCell.id,c=>({...c,content:c.content.kind==='image'?{...c.content,rotation}:c.content}))} style={styles.deepInput}/>
                   </>
                 ) : null}
 
