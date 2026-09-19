@@ -839,11 +839,18 @@ export default function Frame360EditorModal({
   };
 
   const requestClose = () => {
+    const currentDraft = draft;
     const templateUnchanged =
-      !draft || !sessionSnapshot || JSON.stringify(draft) === JSON.stringify(sessionSnapshot);
+      !currentDraft ||
+      !sessionSnapshot ||
+      JSON.stringify(currentDraft) === JSON.stringify(sessionSnapshot);
     const frameUnchanged =
       JSON.stringify(frameLayoutDraft ?? null) === JSON.stringify(frameLayout ?? null);
     if (templateUnchanged && frameUnchanged) {
+      onClose();
+      return;
+    }
+    if (!currentDraft) {
       onClose();
       return;
     }
@@ -855,9 +862,9 @@ export default function Frame360EditorModal({
         onPress: () =>
           onSave(
             {
-              ...draft,
+              ...currentDraft,
               locked: true,
-              version: draft.version + 1,
+              version: currentDraft.version + 1,
               updatedAt: Date.now(),
             },
             frameLayoutDraft,
