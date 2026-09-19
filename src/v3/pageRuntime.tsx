@@ -5,6 +5,7 @@ import type { PageFieldKey } from './pageRegistry';
 import type { V3Preferences } from './model';
 import { useGlobal360, type Global360NodeDescriptor } from './components/Global360Context';
 import type { Frame360Template } from './frame360';
+import Frame360Runtime from './components/Frame360Runtime';
 
 const QUOTE_FIELDS = new Set(['price', 'previousClose', 'open', 'high', 'low', 'volume', 'marketValue', 'changePct']);
 const TODAY_FIELDS = new Set(['todayPnl', 'todayPnlPct']);
@@ -168,6 +169,52 @@ function applyGlobal360NodeStyles(
   });
 }
 
+function UserCreatedPageFrame({
+  prefs,
+  page,
+  cardId,
+  title,
+}: {
+  prefs: V3Preferences;
+  page: PageFieldKey;
+  cardId: string;
+  title: string;
+}) {
+  const global360 = useGlobal360();
+  const template = global360.resolveTemplate(page, cardId);
+  return (
+    <PageFrame prefs={prefs} page={page} cardId={cardId}>
+      <View
+        style={{
+          minHeight: 112,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: '#E2E8F0',
+          backgroundColor: '#FFFFFF',
+          padding: 12,
+          overflow: 'hidden',
+        }}
+      >
+        {template && template.grid.dataCells.length ? (
+          <Frame360Runtime
+            template={template}
+            data={{}}
+            reminderContext={{ today: '' }}
+            minHeight={88}
+          />
+        ) : (
+          <>
+            <Text style={{ color: '#0F172A', fontSize: 12, fontWeight: '900' }}>{title}</Text>
+            <Text style={{ marginTop: 6, color: '#64748B', fontSize: 10 }}>
+              長按框架進入 360 編輯器，再使用「＋新增方塊」建立內容。
+            </Text>
+          </>
+        )}
+      </View>
+    </PageFrame>
+  );
+}
+
 export function PageFrameStack({
   prefs,
   page,
@@ -187,7 +234,25 @@ export function PageFrameStack({
       }
       return [node];
     });
-  const sorted = flatten(children).sort((a, b) => {
+  const flattened = flatten(children);
+  const existingIds = new Set(
+    flattened
+      .filter(React.isValidElement)
+      .map(node => String((node as React.ReactElement<{ cardId?: string }>).props.cardId ?? ''))
+      .filter(Boolean),
+  );
+  const customFrames = (prefs.pageLayouts?.[page]?.cards ?? [])
+    .filter(card => card.kind === 'custom' && !existingIds.has(card.id))
+    .map(card => (
+      <UserCreatedPageFrame
+        key={card.id}
+        prefs={prefs}
+        page={page}
+        cardId={card.id}
+        title={card.title}
+      />
+    ));
+  const sorted = [...flattened, ...customFrames].sort((a, b) => {
     const aId = React.isValidElement(a) ? String((a.props as { cardId?: string }).cardId ?? '') : '';
     const bId = React.isValidElement(b) ? String((b.props as { cardId?: string }).cardId ?? '') : '';
     return (rank.get(aId) ?? 999) - (rank.get(bId) ?? 999);
@@ -270,6 +335,27 @@ export function PageFrame({
             backgroundColor: 'rgba(0,102,255,0.025)',
           }}
         />
+      ) : null}
+      {editActive && global360.enabled && cardId === `${page}-header` ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`新增 ${page} 頁面框架`}
+          onPress={() => global360.addPageFrame(page)}
+          style={{
+            position: 'absolute',
+            right: 8,
+            top: 8,
+            zIndex: 1001,
+            minHeight: 34,
+            borderRadius: 999,
+            backgroundColor: '#0066FF',
+            paddingHorizontal: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900' }}>＋新增</Text>
+        </Pressable>
       ) : null}
     </View>
   );
