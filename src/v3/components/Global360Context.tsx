@@ -101,11 +101,9 @@ export function Global360Provider({
   children: React.ReactNode;
 }) {
   const [active, setActive] = useState<ActiveEdit | null>(null);
-  const enabled =
-    prefs.globalEditMode ||
-    Object.entries(prefs.monitoring?.pageCustomize ?? {}).some(
-      ([page, value]) => page !== 'settings' && Boolean(value),
-    );
+  // V5.0.5: Settings owns the single 360 switch. Per-page "設定模式" flags are legacy
+  // state only and must not activate the editor.
+  const enabled = Boolean(prefs.globalEditMode);
 
   const canEditPage = useCallback(
     (page: PageFieldKey) => enabled && page !== 'settings',
