@@ -201,6 +201,11 @@ function UserCreatedPageFrame({
             template={template}
             data={{}}
             reminderContext={{ today: '' }}
+            profitLossColors={{
+              positive: prefs.positiveColor,
+              negative: prefs.negativeColor,
+              neutral: prefs.neutralColor ?? '#CA8A04',
+            }}
             minHeight={88}
           />
         ) : (
