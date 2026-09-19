@@ -22,6 +22,7 @@ import { PAGE_REGISTRY, type PageFieldKey } from '../pageRegistry';
 import { normalizeGridMonitor } from '../monitoring';
 import { PageFrame } from '../pageRuntime';
 import FontScaleScope from '../components/FontScaleScope';
+import ColorPalettePicker from '../../components/ColorPalettePicker';
 import Frame360EditorModal from '../components/Frame360EditorModal';
 import { createFrame360Template, type Frame360Template } from '../frame360';
 import { createPortfolioHoldingFrame360Template } from '../frame360Defaults';
@@ -1581,6 +1582,39 @@ export function SettingsScreen({
                   step={5}
                   suffix="%"
                   onChange={fontScale => onChange({ fontScale })}
+                />
+
+                <Text style={styles.groupTitle}>App 全域損益顏色</Text>
+                <Text style={styles.helperText}>
+                  360 的「損益色」只引用這裡；文字、文字背景、方塊背景與邊框可各自決定是否跟隨。
+                </Text>
+                <ColorPalettePicker
+                  label="正損益顏色"
+                  value={prefs.positiveColor}
+                  allowTheme={false}
+                  onChange={positiveColor => onChange({ positiveColor })}
+                />
+                <ColorPalettePicker
+                  label="負損益顏色"
+                  value={prefs.negativeColor}
+                  allowTheme={false}
+                  onChange={negativeColor => onChange({ negativeColor })}
+                />
+                <ColorPalettePicker
+                  label="零損益 / 持平顏色"
+                  value={prefs.neutralColor ?? '#CA8A04'}
+                  allowTheme={false}
+                  onChange={neutralColor => onChange({ neutralColor })}
+                />
+                <SmallAction
+                  label="還原台股預設：正紅・負綠・持平黃"
+                  onPress={() =>
+                    onChange({
+                      positiveColor: '#EF4444',
+                      negativeColor: '#10B981',
+                      neutralColor: '#CA8A04',
+                    })
+                  }
                 />
 
                 <Text style={styles.groupTitle}>股息月曆</Text>
