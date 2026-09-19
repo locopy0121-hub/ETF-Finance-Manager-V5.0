@@ -58,6 +58,7 @@ export function MarketScreen({ common, onSettings, onOpenHolding }: MarketScreen
   return (
     <FontScaleScope prefs={prefs}>
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <PageFrame prefs={prefs} page="market" cardId="market-header">
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.eyebrow}>MARKET</Text>
@@ -75,6 +76,7 @@ export function MarketScreen({ common, onSettings, onOpenHolding }: MarketScreen
           </Pressable>
         </View>
       </View>
+      </PageFrame>
 
       <PageFrame prefs={prefs} page="market" cardId="market-main">
         <View style={styles.card}>
