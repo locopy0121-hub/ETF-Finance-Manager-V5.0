@@ -617,6 +617,192 @@ export default function Frame360EditorModal({
                   </Pressable>
                 </View>
 
+                <View style={styles.stepRow}>
+                  <Text style={styles.deepLabel}>透明度</Text>
+                  <Pressable
+                    style={styles.stepButton}
+                    onPress={() =>
+                      replaceCell(deepCell.id, cell => ({
+                        ...cell,
+                        style: {
+                          ...cell.style,
+                          opacity: Math.max(0, (cell.style.opacity ?? 100) - 5),
+                        },
+                      }))
+                    }
+                  >
+                    <Text style={styles.stepButtonText}>−</Text>
+                  </Pressable>
+                  <Text style={styles.stepValue}>{deepCell.style.opacity ?? 100}%</Text>
+                  <Pressable
+                    style={styles.stepButton}
+                    onPress={() =>
+                      replaceCell(deepCell.id, cell => ({
+                        ...cell,
+                        style: {
+                          ...cell.style,
+                          opacity: Math.min(100, (cell.style.opacity ?? 100) + 5),
+                        },
+                      }))
+                    }
+                  >
+                    <Text style={styles.stepButtonText}>＋</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.stepRow}>
+                  <Text style={styles.deepLabel}>圓角</Text>
+                  <Pressable
+                    style={styles.stepButton}
+                    onPress={() =>
+                      replaceCell(deepCell.id, cell => ({
+                        ...cell,
+                        style: { ...cell.style, radius: Math.max(0, (cell.style.radius ?? 8) - 1) },
+                      }))
+                    }
+                  >
+                    <Text style={styles.stepButtonText}>−</Text>
+                  </Pressable>
+                  <Text style={styles.stepValue}>{deepCell.style.radius ?? 8}</Text>
+                  <Pressable
+                    style={styles.stepButton}
+                    onPress={() =>
+                      replaceCell(deepCell.id, cell => ({
+                        ...cell,
+                        style: { ...cell.style, radius: Math.min(48, (cell.style.radius ?? 8) + 1) },
+                      }))
+                    }
+                  >
+                    <Text style={styles.stepButtonText}>＋</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.stepRow}>
+                  <Text style={styles.deepLabel}>框線</Text>
+                  <Pressable
+                    style={styles.stepButton}
+                    onPress={() =>
+                      replaceCell(deepCell.id, cell => ({
+                        ...cell,
+                        style: { ...cell.style, borderWidth: Math.max(0, (cell.style.borderWidth ?? 0) - 1) },
+                      }))
+                    }
+                  >
+                    <Text style={styles.stepButtonText}>−</Text>
+                  </Pressable>
+                  <Text style={styles.stepValue}>{deepCell.style.borderWidth ?? 0}</Text>
+                  <Pressable
+                    style={styles.stepButton}
+                    onPress={() =>
+                      replaceCell(deepCell.id, cell => ({
+                        ...cell,
+                        style: { ...cell.style, borderWidth: Math.min(8, (cell.style.borderWidth ?? 0) + 1) },
+                      }))
+                    }
+                  >
+                    <Text style={styles.stepButtonText}>＋</Text>
+                  </Pressable>
+                </View>
+
+                <Text style={styles.deepLabel}>字重</Text>
+                <View style={styles.choiceWrap}>
+                  {(['400', '600', '700', '800', '900'] as const).map(weight => (
+                    <Pressable
+                      key={weight}
+                      onPress={() =>
+                        replaceCell(deepCell.id, cell => ({
+                          ...cell,
+                          style: { ...cell.style, fontWeight: weight },
+                        }))
+                      }
+                      style={[
+                        styles.choice,
+                        deepCell.style.fontWeight === weight && styles.choiceActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.choiceText,
+                          deepCell.style.fontWeight === weight && styles.choiceTextActive,
+                        ]}
+                      >
+                        {weight}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <Text style={styles.deepLabel}>顯示狀態</Text>
+                <View style={styles.choiceWrap}>
+                  <Pressable
+                    onPress={() =>
+                      replaceCell(deepCell.id, cell => ({
+                        ...cell,
+                        style: { ...cell.style, visible: true },
+                      }))
+                    }
+                    style={[
+                      styles.choice,
+                      deepCell.style.visible !== false && styles.choiceActive,
+                    ]}
+                  >
+                    <Text style={[styles.choiceText, deepCell.style.visible !== false && styles.choiceTextActive]}>顯示</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() =>
+                      replaceCell(deepCell.id, cell => ({
+                        ...cell,
+                        style: { ...cell.style, visible: false },
+                      }))
+                    }
+                    style={[
+                      styles.choice,
+                      deepCell.style.visible === false && styles.choiceActive,
+                    ]}
+                  >
+                    <Text style={[styles.choiceText, deepCell.style.visible === false && styles.choiceTextActive]}>隱藏</Text>
+                  </Pressable>
+                </View>
+
+                <Text style={styles.deepLabel}>文字色</Text>
+                <TextInput
+                  value={deepCell.style.textColor ?? ''}
+                  onChangeText={textColor =>
+                    replaceCell(deepCell.id, cell => ({
+                      ...cell,
+                      style: { ...cell.style, textColor },
+                    }))
+                  }
+                  placeholder="#0F172A"
+                  style={styles.deepInput}
+                />
+
+                <Text style={styles.deepLabel}>背景色</Text>
+                <TextInput
+                  value={deepCell.style.backgroundColor ?? ''}
+                  onChangeText={backgroundColor =>
+                    replaceCell(deepCell.id, cell => ({
+                      ...cell,
+                      style: { ...cell.style, backgroundColor },
+                    }))
+                  }
+                  placeholder="#FFFFFF / transparent"
+                  style={styles.deepInput}
+                />
+
+                <Text style={styles.deepLabel}>框線色</Text>
+                <TextInput
+                  value={deepCell.style.borderColor ?? ''}
+                  onChangeText={borderColor =>
+                    replaceCell(deepCell.id, cell => ({
+                      ...cell,
+                      style: { ...cell.style, borderColor },
+                    }))
+                  }
+                  placeholder="#E2E8F0"
+                  style={styles.deepInput}
+                />
+
                 {deepCell.content.kind === 'text' ? (
                   <>
                     <Text style={styles.deepLabel}>文字內容</Text>
@@ -635,24 +821,123 @@ export default function Frame360EditorModal({
 
                 {deepCell.content.kind === 'data' ? (
                   <>
+                    <Text style={styles.deepLabel}>標題文字</Text>
+                    <TextInput
+                      value={deepCell.content.label ?? ''}
+                      onChangeText={label =>
+                        replaceCell(deepCell.id, cell => ({
+                          ...cell,
+                          content:
+                            cell.content.kind === 'data'
+                              ? { ...cell.content, label }
+                              : cell.content,
+                        }))
+                      }
+                      style={styles.deepInput}
+                    />
+
                     <Text style={styles.deepLabel}>資料綁定</Text>
                     <TextInput
                       value={deepCell.content.binding}
                       onChangeText={binding =>
                         replaceCell(deepCell.id, cell => ({
                           ...cell,
-                          content: {
-                            kind: 'data',
-                            binding,
-                            label:
-                              cell.content.kind === 'data'
-                                ? cell.content.label
-                                : undefined,
-                          },
+                          content:
+                            cell.content.kind === 'data'
+                              ? { ...cell.content, binding }
+                              : cell.content,
                         }))
                       }
                       style={styles.deepInput}
                     />
+
+                    <Text style={styles.deepLabel}>公式 / 運算式</Text>
+                    <TextInput
+                      value={deepCell.content.formula ?? ''}
+                      onChangeText={formula =>
+                        replaceCell(deepCell.id, cell => ({
+                          ...cell,
+                          content:
+                            cell.content.kind === 'data'
+                              ? { ...cell.content, formula }
+                              : cell.content,
+                        }))
+                      }
+                      placeholder="例：marketValue-currentTradeCost"
+                      style={styles.deepInput}
+                    />
+
+                    <Text style={styles.deepLabel}>資料格式</Text>
+                    <View style={styles.choiceWrap}>
+                      {([
+                        ['text', '文字'],
+                        ['number', '數字'],
+                        ['currency', '金額'],
+                        ['percent', '百分比'],
+                      ] as const).map(([format, label]) => (
+                        <Pressable
+                          key={format}
+                          onPress={() =>
+                            replaceCell(deepCell.id, cell => ({
+                              ...cell,
+                              content:
+                                cell.content.kind === 'data'
+                                  ? { ...cell.content, format }
+                                  : cell.content,
+                            }))
+                          }
+                          style={[
+                            styles.choice,
+                            (deepCell.content.format ?? 'text') === format && styles.choiceActive,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.choiceText,
+                              (deepCell.content.format ?? 'text') === format && styles.choiceTextActive,
+                            ]}
+                          >
+                            {label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+
+                    <Text style={styles.deepLabel}>顏色規則</Text>
+                    <View style={styles.choiceWrap}>
+                      {([
+                        ['auto', '自動'],
+                        ['fixed', '固定'],
+                        ['pnl', '損益正負'],
+                        ['market', '市場狀態'],
+                      ] as const).map(([colorRule, label]) => (
+                        <Pressable
+                          key={colorRule}
+                          onPress={() =>
+                            replaceCell(deepCell.id, cell => ({
+                              ...cell,
+                              content:
+                                cell.content.kind === 'data'
+                                  ? { ...cell.content, colorRule }
+                                  : cell.content,
+                            }))
+                          }
+                          style={[
+                            styles.choice,
+                            (deepCell.content.colorRule ?? 'auto') === colorRule && styles.choiceActive,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.choiceText,
+                              (deepCell.content.colorRule ?? 'auto') === colorRule && styles.choiceTextActive,
+                            ]}
+                          >
+                            {label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
                   </>
                 ) : null}
 
