@@ -213,3 +213,147 @@ export function updateFrame360Template(
     updatedAt: Date.now(),
   };
 }
+
+
+export type Frame360MergeContentStrategy =
+  | 'requireDecision'
+  | 'keepFirst'
+  | 'keepLast'
+  | 'keepAll';
+
+export type Frame360MergeResult =
+  | { status: 'needsDecision'; occupiedCells: Frame360DataCell[] }
+  | { status: 'merged'; grid: Frame360Grid; mergedCell: Frame360DataCell };
+
+const isEmptyContent = (content: Frame360CellContent) => content.kind === 'empty';
+
+function rectangleFromCells(cells: Frame360DataCell[]) {
+  const rowStart = Math.min(...cells.map(cell => cell.rowStart));
+  const columnStart = Math.min(...cells.map(cell => cell.columnStart));
+  const rowEnd = Math.max(...cells.map(cell => cell.rowStart + cell.rowSpan - 1));
+  const columnEnd = Math.max(...cells.map(cell => cell.columnStart + cell.columnSpan - 1));
+  return {
+    rowStart,
+    columnStart,
+    rowSpan: rowEnd - rowStart + 1,
+    columnSpan: columnEnd - columnStart + 1,
+  };
+}
+
+function expectedRectangleIds(
+  rowStart: number,
+  columnStart: number,
+  rowSpan: number,
+  columnSpan: number,
+) {
+  const ids: string[] = [];
+  for (let row = rowStart; row < rowStart + rowSpan; row += 1) {
+    for (let column = columnStart; column < columnStart + columnSpan; column += 1) {
+      ids.push(makeCellId(row, column));
+    }
+  }
+  return ids;
+}
+
+export function mergeFrame360Cells(
+  grid: Frame360Grid,
+  dataCellIds: string[],
+  strategy: Frame360MergeContentStrategy = 'requireDecision',
+): Frame360MergeResult {
+  const uniqueIds = [...new Set(dataCellIds)];
+  if (uniqueIds.length < 2) {
+    throw new Error('至少需要選擇兩個資料格才能合併');
+  }
+
+  const selected = uniqueIds.map(id => {
+    const found = grid.dataCells.find(cell => cell.id === id);
+    if (!found) throw new Error(`找不到資料格：${id}`);
+    return found;
+  });
+
+  const rect = rectangleFromCells(selected);
+  const expected = expectedRectangleIds(
+    rect.rowStart,
+    rect.columnStart,
+    rect.rowSpan,
+    rect.columnSpan,
+  ).sort();
+  const actual = selected.flatMap(cell => cell.baseCellIds).sort();
+  if (
+    expected.length !== actual.length ||
+    expected.some((id, index) => id !== actual[index])
+  ) {
+    throw new Error('合併範圍必須形成完整矩形，不能跨越未選取區域');
+  }
+
+  const occupied = selected.filter(cell => !isEmptyContent(cell.content));
+  if (occupied.length > 1 && strategy === 'requireDecision') {
+    return { status: 'needsDecision', occupiedCells: occupied };
+  }
+
+  let content: Frame360CellContent = { kind: 'empty' };
+  if (occupied.length > 0) {
+    if (strategy === 'keepLast') content = occupied[occupied.length - 1].content;
+    else if (strategy === 'keepAll') {
+      content = {
+        kind: 'container',
+        childTemplateId: undefined,
+      };
+    } else {
+      content = occupied[0].content;
+    }
+  }
+
+  const mergedCell: Frame360DataCell = {
+    id: `merged-${rect.rowStart}-${rect.columnStart}-${rect.rowSpan}x${rect.columnSpan}`,
+    ...rect,
+    baseCellIds: expected,
+    content,
+    style: { ...selected[0].style },
+  };
+
+  const selectedSet = new Set(uniqueIds);
+  return {
+    status: 'merged',
+    mergedCell,
+    grid: {
+      ...grid,
+      dataCells: [
+        ...grid.dataCells.filter(cell => !selectedSet.has(cell.id)),
+        mergedCell,
+      ],
+    },
+  };
+}
+
+export function splitFrame360Cell(
+  grid: Frame360Grid,
+  dataCellId: string,
+): Frame360Grid {
+  const target = grid.dataCells.find(cell => cell.id === dataCellId);
+  if (!target) throw new Error(`找不到資料格：${dataCellId}`);
+  if (target.baseCellIds.length === 1) return grid;
+
+  const restored = target.baseCellIds.map(baseId => {
+    const base = grid.baseCells.find(cell => cell.id === baseId);
+    if (!base) throw new Error(`找不到基礎格：${baseId}`);
+    return {
+      id: `cell-${base.id}`,
+      rowStart: base.row,
+      columnStart: base.column,
+      rowSpan: 1,
+      columnSpan: 1,
+      baseCellIds: [base.id],
+      content: { kind: 'empty' } as Frame360CellContent,
+      style: { ...DEFAULT_FRAME360_STYLE },
+    };
+  });
+
+  return {
+    ...grid,
+    dataCells: [
+      ...grid.dataCells.filter(cell => cell.id !== dataCellId),
+      ...restored,
+    ],
+  };
+}
