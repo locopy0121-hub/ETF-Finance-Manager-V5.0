@@ -20,11 +20,14 @@ import {
 } from '../frame360Reminder';
 import { frame360ComponentLabel } from '../frame360Registry';
 
+type ProfitLossColors = { positive: string; negative: string; neutral: string };
+
 type Props = {
   template: Frame360Template;
   data: Record<string, unknown>;
   reminderContext: Frame360ReminderContext;
   minHeight?: number;
+  profitLossColors?: ProfitLossColors;
 };
 
 function ReminderObject({
@@ -109,19 +112,27 @@ function resolveRuleColor(
   value: unknown,
   fixed: string | undefined,
   surface: 'text' | 'background' | 'border' = 'text',
+  profitLossColors: ProfitLossColors = {
+    positive: '#EF4444',
+    negative: '#10B981',
+    neutral: '#CA8A04',
+  },
 ) {
   if (!rule || rule === 'fixed' || rule === 'auto') return fixed;
   if (rule === 'theme') return fixed ?? (surface === 'background' ? '#EFF6FF' : '#0066FF');
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return fixed;
   if (surface === 'background') {
-    if (numeric > 0) return '#FEE2E2';
-    if (numeric < 0) return '#DCFCE7';
-    return '#FEF9C3';
+    const hex = numeric > 0
+      ? profitLossColors.positive
+      : numeric < 0
+        ? profitLossColors.negative
+        : profitLossColors.neutral;
+    return hex + '22';
   }
-  if (numeric > 0) return '#DC2626';
-  if (numeric < 0) return '#16A34A';
-  return '#CA8A04';
+  if (numeric > 0) return profitLossColors.positive;
+  if (numeric < 0) return profitLossColors.negative;
+  return profitLossColors.neutral;
 }
 
 function resolveDataValue(cell: Frame360DataCell, data: Props['data']) {
@@ -204,10 +215,12 @@ function CellContent({
   cell,
   data,
   reminderContext,
+  profitLossColors,
 }: {
   cell: Frame360DataCell;
   data: Props['data'];
   reminderContext: Frame360ReminderContext;
+  profitLossColors: ProfitLossColors;
 }) {
   const visibility = resolveFrame360CellVisibility(cell, reminderContext);
   if (!visibility.visible) return null;
@@ -236,16 +249,18 @@ function CellContent({
   if (content.kind === 'data') {
     const raw = resolveDataValue(cell, data);
     const color = resolveRuleColor(
-      content.colorRule ?? cell.style.textColorRule ?? 'auto',
+      cell.style.textColorRule ?? content.colorRule ?? 'auto',
       raw,
       cell.style.textColor,
       'text',
+      profitLossColors,
     );
     const textBackgroundColor = resolveRuleColor(
       cell.style.textBackgroundColorRule,
       raw,
       cell.style.textBackgroundColor,
       'background',
+      profitLossColors,
     );
     return (
       <View>
@@ -455,8 +470,12 @@ export default function Frame360Runtime({
   data,
   reminderContext,
   minHeight = 92,
+  profitLossColors = {
+    positive: '#EF4444',
+    negative: '#10B981',
+    neutral: '#CA8A04',
+  },
 }: Props) {
-  const rowHeight = minHeight / template.grid.rows;
   const cells = useMemo(
     () => template.blocks
       .filter(cell => cell.content.kind !== 'empty' || Boolean(cell.targetNodeId))
@@ -475,31 +494,24 @@ export default function Frame360Runtime({
     <View style={[styles.root, { minHeight }]}>
       {cells.map(cell => {
         if (cell.style.visible === false) return null;
-        const free = cell.layout?.mode === 'free';
-        const left = free && cell.layout?.x != null
-          ? cell.layout.x
-          : ((cell.columnStart - 1) / template.grid.columns) * 100;
-        const top = free && cell.layout?.y != null
-          ? cell.layout.y
-          : ((cell.rowStart - 1) / template.grid.rows) * 100;
-        const width = free && cell.layout?.width != null
-          ? cell.layout.width
-          : (cell.columnSpan / template.grid.columns) * 100;
-        const height = free && cell.layout?.height != null
-          ? (cell.layout.height / 100) * minHeight
-          : rowHeight * cell.rowSpan;
+        const left = cell.layout?.x ?? 0;
+        const top = cell.layout?.y ?? 0;
+        const width = cell.layout?.width ?? 20;
+        const height = ((cell.layout?.height ?? 12) / 100) * minHeight;
         const rawForColor = resolveDataValue(cell, data);
         const backgroundColor = resolveRuleColor(
           cell.style.backgroundColorRule,
           rawForColor,
           cell.style.backgroundColor,
           'background',
+          profitLossColors,
         );
         const borderColor = resolveRuleColor(
           cell.style.borderColorRule,
           rawForColor,
           cell.style.borderColor,
           'border',
+          profitLossColors,
         );
         const align =
           cell.style.alignment.includes('Right')
