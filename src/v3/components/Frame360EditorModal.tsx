@@ -428,6 +428,7 @@ export default function Frame360EditorModal({
   ) => (
     <>
       <Text style={styles.deepLabel}>{label}</Text>
+      <Text style={styles.previewHint}>快速色塊</Text>
       <View style={styles.paletteRow}>
         {COLOR_PRESETS.map(color => (
           <Pressable
@@ -449,8 +450,31 @@ export default function Frame360EditorModal({
           />
         ))}
       </View>
+      <Text style={styles.previewHint}>完整色盤</Text>
+      <View style={styles.colorPickerGrid}>
+        {FULL_COLOR_PALETTE.map((color, index) => (
+          <Pressable
+            key={`${field}-palette-${index}`}
+            accessibilityLabel={color}
+            onPress={() =>
+              deepCell &&
+              !editorLocked &&
+              replaceCell(deepCell.id, cell => ({
+                ...cell,
+                style: { ...cell.style, [field]: color },
+              }))
+            }
+            style={[
+              styles.colorPickerSwatch,
+              { backgroundColor: color },
+              deepCell?.style[field] === color && styles.colorSwatchActive,
+            ]}
+          />
+        ))}
+      </View>
       <TextInput
         editable={!editorLocked}
+        autoCapitalize="characters"
         value={(deepCell?.style[field] as string | undefined) ?? ''}
         onChangeText={value =>
           deepCell &&
@@ -463,6 +487,56 @@ export default function Frame360EditorModal({
         style={styles.deepInput}
       />
     </>
+  );
+
+  const renderSourcePicker = (
+    cell: Frame360DataCell,
+    binding: string,
+    onSelect: (binding: string) => void,
+  ) => (
+    <View style={styles.sourcePanel}>
+      <View style={styles.sourceHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.deepLabel}>數據來源</Text>
+          <Text style={styles.sourceValue}>{binding || '尚未指定'}</Text>
+        </View>
+        <Pressable
+          onPress={() =>
+            replaceCell(cell.id, current => ({
+              ...current,
+              sourceLocked: !current.sourceLocked,
+            }))
+          }
+          style={[styles.choice, cell.sourceLocked && styles.choiceActive]}
+        >
+          <Text style={styles.choiceText}>
+            {cell.sourceLocked ? '🔒 點擊解鎖' : '🔓 可重新指向'}
+          </Text>
+        </Pressable>
+      </View>
+      {cell.sourceLocked ? (
+        <Text style={styles.previewHint}>原生資料來源已保護；解鎖後才可重新指向。</Text>
+      ) : (
+        DATA_SOURCE_GROUPS.map(group => (
+          <View key={group.group} style={styles.sourceGroup}>
+            <Text style={styles.previewHint}>{group.group}</Text>
+            <View style={styles.choiceWrap}>
+              {group.items.map(([key, sourceLabel]) => (
+                <Pressable
+                  key={key}
+                  onPress={() => onSelect(key)}
+                  style={[styles.choice, binding === key && styles.choiceActive]}
+                >
+                  <Text style={[styles.choiceText, binding === key && styles.choiceTextActive]}>
+                    {sourceLabel}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ))
+      )}
+    </View>
   );
 
   const applyType = (kind: Frame360CellKind) => {
@@ -605,6 +679,55 @@ export default function Frame360EditorModal({
     setSelected([result.block.id]);
     setMultiSelectMode(false);
     setTypeDialog(true);
+  };
+
+  const duplicateBlock = (cellId: string) => {
+    if (!draft || editorLocked) return;
+    const source = draft.grid.dataCells.find(cell => cell.id === cellId);
+    if (!source) return;
+    const copy = JSON.parse(JSON.stringify(source)) as Frame360DataCell;
+    copy.id = `block-${Date.now()}-copy`;
+    const layout = getDefaultLayout(source);
+    copy.layout = {
+      ...layout,
+      x: Math.min(100 - layout.width, layout.x + 2),
+      y: Math.min(100 - layout.height, layout.y + 2),
+      zIndex: (layout.zIndex ?? 0) + 1,
+      locked: false,
+    };
+    setDraft(current =>
+      current
+        ? {
+            ...current,
+            grid: {
+              ...current.grid,
+              dataCells: [...current.grid.dataCells, copy],
+            },
+          }
+        : current,
+    );
+    setSelected([copy.id]);
+    setDeepCellId(copy.id);
+    setDeepSnapshot(JSON.parse(JSON.stringify(copy)) as Frame360DataCell);
+  };
+
+  const deleteBlock = (cellId: string) => {
+    if (!draft || editorLocked) return;
+    setDraft(current =>
+      current
+        ? {
+            ...current,
+            grid: {
+              ...current.grid,
+              dataCells: current.grid.dataCells.filter(cell => cell.id !== cellId),
+            },
+          }
+        : current,
+    );
+    setSelected([]);
+    setDeepDialog(false);
+    setDeepCellId(null);
+    setDeepSnapshot(null);
   };
 
   const handleCellPress = (cell: Frame360DataCell) => {
@@ -1096,6 +1219,22 @@ export default function Frame360EditorModal({
                   <Pressable style={styles.choice} onPress={() => setLayer(deepCell.id, 'down')}><Text style={styles.choiceText}>下移一層</Text></Pressable>
                   <Pressable style={styles.choice} onPress={() => setLayer(deepCell.id, 'bottom')}><Text style={styles.choiceText}>最下層</Text></Pressable>
                 </View>
+                <View style={styles.choiceWrap}>
+                  <Pressable style={styles.choice} onPress={() => duplicateBlock(deepCell.id)}>
+                    <Text style={styles.choiceText}>複製方塊</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.choice, styles.dangerChoice]}
+                    onPress={() =>
+                      Alert.alert('刪除方塊', '確定刪除此方塊？', [
+                        { text: '取消', style: 'cancel' },
+                        { text: '刪除', style: 'destructive', onPress: () => deleteBlock(deepCell.id) },
+                      ])
+                    }
+                  >
+                    <Text style={styles.dangerChoiceText}>刪除方塊</Text>
+                  </Pressable>
+                </View>
 
                 <Text style={styles.sectionTitle}>內容與對齊</Text>
                 <Text style={styles.deepLabel}>九宮格對齊</Text>
@@ -1475,6 +1614,78 @@ export default function Frame360EditorModal({
                 {renderColorPalette('方塊背景顏色', 'backgroundColor')}
                 {renderColorPalette('邊框顏色', 'borderColor')}
 
+                <Text style={styles.sectionTitle}>背景圖片</Text>
+                <Text style={styles.previewHint}>背景層與文字背景分離；此設定不會修改文字背景。</Text>
+                <TextInput
+                  editable={!editorLocked}
+                  value={deepCell.style.backgroundImageUri ?? ''}
+                  onChangeText={backgroundImageUri =>
+                    replaceCell(deepCell.id, cell => ({
+                      ...cell,
+                      style: { ...cell.style, backgroundImageUri },
+                    }))
+                  }
+                  placeholder="圖片 URI"
+                  style={styles.deepInput}
+                />
+                <View style={styles.choiceWrap}>
+                  {[
+                    ['cover', '填滿'],
+                    ['contain', '完整'],
+                    ['stretch', '拉伸'],
+                    ['repeat', '平鋪'],
+                    ['original', '原尺寸'],
+                  ].map(([fit, label]) => (
+                    <Pressable
+                      key={fit}
+                      onPress={() =>
+                        replaceCell(deepCell.id, cell => ({
+                          ...cell,
+                          style: { ...cell.style, backgroundImageFit: fit as any },
+                        }))
+                      }
+                      style={[
+                        styles.choice,
+                        (deepCell.style.backgroundImageFit ?? 'cover') === fit && styles.choiceActive,
+                      ]}
+                    >
+                      <Text style={styles.choiceText}>{label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <View style={styles.stepRow}>
+                  <Text style={styles.deepLabel}>背景圖透明度</Text>
+                  <Pressable
+                    style={styles.stepButton}
+                    onPress={() =>
+                      replaceCell(deepCell.id, cell => ({
+                        ...cell,
+                        style: {
+                          ...cell.style,
+                          backgroundImageOpacity: Math.max(0, (cell.style.backgroundImageOpacity ?? 100) - 5),
+                        },
+                      }))
+                    }
+                  >
+                    <Text style={styles.stepButtonText}>−</Text>
+                  </Pressable>
+                  <Text style={styles.stepValue}>{deepCell.style.backgroundImageOpacity ?? 100}%</Text>
+                  <Pressable
+                    style={styles.stepButton}
+                    onPress={() =>
+                      replaceCell(deepCell.id, cell => ({
+                        ...cell,
+                        style: {
+                          ...cell.style,
+                          backgroundImageOpacity: Math.min(100, (cell.style.backgroundImageOpacity ?? 100) + 5),
+                        },
+                      }))
+                    }
+                  >
+                    <Text style={styles.stepButtonText}>＋</Text>
+                  </Pressable>
+                </View>
+
                 <Text style={styles.deepLabel}>動態顏色來源</Text>
                 <View style={styles.choiceWrap}>
                   {([
@@ -1527,6 +1738,135 @@ export default function Frame360EditorModal({
                   </>
                 ) : null}
 
+                {deepCell.content.kind === 'chart' ? (
+                  <>
+                    <Text style={styles.sectionTitle}>圖表資料連接</Text>
+                    {renderSourcePicker(
+                      deepCell,
+                      deepCell.content.binding,
+                      binding =>
+                        replaceCell(deepCell.id, cell => ({
+                          ...cell,
+                          content:
+                            cell.content.kind === 'chart'
+                              ? {
+                                  ...cell.content,
+                                  binding,
+                                  yBindings: [binding],
+                                }
+                              : cell.content,
+                        })),
+                    )}
+                    <Text style={styles.deepLabel}>X 軸來源</Text>
+                    <View style={styles.choiceWrap}>
+                      {[
+                        ['time', '時間'],
+                        ['date', '日期'],
+                        ['month', '月份'],
+                        ['symbol', 'ETF 代號'],
+                      ].map(([key, label]) => (
+                        <Pressable
+                          key={key}
+                          disabled={Boolean(deepCell.sourceLocked)}
+                          onPress={() =>
+                            replaceCell(deepCell.id, cell => ({
+                              ...cell,
+                              content:
+                                cell.content.kind === 'chart'
+                                  ? { ...cell.content, xBinding: key }
+                                  : cell.content,
+                            }))
+                          }
+                          style={[
+                            styles.choice,
+                            deepCell.content.kind === 'chart' && deepCell.content.xBinding === key && styles.choiceActive,
+                            deepCell.sourceLocked && styles.disabled,
+                          ]}
+                        >
+                          <Text style={styles.choiceText}>{label}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                    <Text style={styles.deepLabel}>圖表類型</Text>
+                    <View style={styles.choiceWrap}>
+                      {[
+                        ['line', '折線'],
+                        ['area', '面積'],
+                        ['bar', '柱狀'],
+                      ].map(([key, label]) => (
+                        <Pressable
+                          key={key}
+                          onPress={() =>
+                            replaceCell(deepCell.id, cell => ({
+                              ...cell,
+                              content:
+                                cell.content.kind === 'chart'
+                                  ? { ...cell.content, chartType: key }
+                                  : cell.content,
+                            }))
+                          }
+                          style={[
+                            styles.choice,
+                            deepCell.content.kind === 'chart' && deepCell.content.chartType === key && styles.choiceActive,
+                          ]}
+                        >
+                          <Text style={styles.choiceText}>{label}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                    <Text style={styles.deepLabel}>資料範圍</Text>
+                    <View style={styles.choiceWrap}>
+                      {[
+                        ['1d', '1日'], ['1w', '1週'], ['1m', '1月'], ['3m', '3月'], ['1y', '1年'], ['all', '全部'],
+                      ].map(([key, label]) => (
+                        <Pressable
+                          key={key}
+                          onPress={() =>
+                            replaceCell(deepCell.id, cell => ({
+                              ...cell,
+                              content:
+                                cell.content.kind === 'chart'
+                                  ? { ...cell.content, range: key as any }
+                                  : cell.content,
+                            }))
+                          }
+                          style={[
+                            styles.choice,
+                            deepCell.content.kind === 'chart' && (deepCell.content.range ?? '1m') === key && styles.choiceActive,
+                          ]}
+                        >
+                          <Text style={styles.choiceText}>{label}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                    <Text style={styles.deepLabel}>資料粒度</Text>
+                    <View style={styles.choiceWrap}>
+                      {[
+                        ['intraday', '盤中'], ['daily', '每日'], ['monthly', '每月'],
+                      ].map(([key, label]) => (
+                        <Pressable
+                          key={key}
+                          onPress={() =>
+                            replaceCell(deepCell.id, cell => ({
+                              ...cell,
+                              content:
+                                cell.content.kind === 'chart'
+                                  ? { ...cell.content, interval: key as any }
+                                  : cell.content,
+                            }))
+                          }
+                          style={[
+                            styles.choice,
+                            deepCell.content.kind === 'chart' && (deepCell.content.interval ?? 'daily') === key && styles.choiceActive,
+                          ]}
+                        >
+                          <Text style={styles.choiceText}>{label}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </>
+                ) : null}
+
                 {deepCell.content.kind === 'data' ? (
                   <>
                     <Text style={styles.deepLabel}>標題文字</Text>
@@ -1544,9 +1884,18 @@ export default function Frame360EditorModal({
                       style={styles.deepInput}
                     />
 
-                    <View style={styles.techHidden}>
-                      <Text style={styles.techHiddenText}>資料來源與技術識別碼已隱藏，避免內部 key 干擾版面編輯。</Text>
-                    </View>
+                    {renderSourcePicker(
+                      deepCell,
+                      deepCell.content.binding,
+                      binding =>
+                        replaceCell(deepCell.id, cell => ({
+                          ...cell,
+                          content:
+                            cell.content.kind === 'data'
+                              ? { ...cell.content, binding }
+                              : cell.content,
+                        })),
+                    )}
 
                     <Text style={styles.deepLabel}>資料格式</Text>
                     <View style={styles.choiceWrap}>
@@ -1623,8 +1972,28 @@ export default function Frame360EditorModal({
                 ) : null}
 
                 <View style={styles.deepPreviewBox}>
-                  <Text style={styles.previewTitle}>此方塊預覽</Text>
-                  <Text style={styles.deepPreviewText}>{cellPreviewText(deepCell)}</Text>
+                  <Text style={styles.previewTitle}>此方塊即時預覽</Text>
+                  <Text style={styles.previewHint}>直接使用目前編輯位置捕捉到的資料，不產生 Demo 數值。</Text>
+                  <View style={{ marginTop: 8, minHeight: 110 }}>
+                    <Frame360Runtime
+                      template={{
+                        ...draft,
+                        grid: {
+                          ...draft.grid,
+                          dataCells: [deepCell],
+                        },
+                      }}
+                      data={previewData}
+                      reminderContext={{
+                        today: previewToday,
+                        dividendDate: previewToday,
+                        exDividendDate: previewToday,
+                        lastBuyDate: previewToday,
+                        payDate: previewToday,
+                      }}
+                      minHeight={110}
+                    />
+                  </View>
                 </View>
               </ScrollView>
             ) : null}
@@ -1968,6 +2337,14 @@ const styles = StyleSheet.create({
   },
   nudgeText: { color: '#0066FF', fontSize: 21, fontWeight: '900' },
   paletteRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  colorPickerGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 3 },
+  colorPickerSwatch: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(15,23,42,0.08)',
+  },
   colorSwatch: {
     width: 30,
     height: 30,
@@ -1982,4 +2359,17 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   techHiddenText: { color: '#64748B', fontSize: 10, fontWeight: '700' },
+  sourcePanel: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    padding: 12,
+    gap: 10,
+  },
+  sourceHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sourceValue: { marginTop: 4, color: '#0066FF', fontSize: 11, fontWeight: '900' },
+  sourceGroup: { gap: 6 },
+  dangerChoice: { borderColor: '#FCA5A5', backgroundColor: '#FEF2F2' },
+  dangerChoiceText: { color: '#DC2626', fontSize: 10, fontWeight: '900' },
 });
