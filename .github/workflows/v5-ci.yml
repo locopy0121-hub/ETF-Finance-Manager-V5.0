@@ -1,4 +1,4 @@
-name: V5.0.2 Continuous Verification
+name: V5.0.4 Continuous Verification
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   verify:
-    name: Verify V5.0.2 source
+    name: Verify V5.0.4 source
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -43,7 +43,7 @@ jobs:
       - name: Global 360 zero-legacy hard-gate
         run: npm run audit:360-core
 
-      - name: Verify V5.0.2 version chain
+      - name: Verify V5.0.4 version chain
         shell: bash
         run: |
           set -euo pipefail
@@ -52,8 +52,8 @@ jobs:
           grep -F '"runtimeVersion": "5.0.2"' app.json
           grep -F "APP_SEMVER='5.0.2'" src/v3/version.ts
           grep -F 'versionName "5.0.2"' android/app/build.gradle
-          grep -F 'ETF財務管家 V5.0.2 NATIVE' android/app/src/main/res/values/strings.xml
-          grep -F 'V5.0.2 Global 360 Complete：全 App 可配置 UI 納入 360' README.md
+          grep -F 'ETF財務管家 V5.0.4 NATIVE' android/app/src/main/res/values/strings.xml
+          grep -F 'V5.0.4 Global 360 Block Workspace：全 App 可配置 UI 改為獨立 Block' README.md
 
       - name: Source diff integrity
         run: git diff --check
