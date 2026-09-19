@@ -39,14 +39,14 @@ for (const token of bannedLegacy) {
 }
 
 const settings = fs.readFileSync('src/v3/screens/SettingsScreen.tsx', 'utf8');
-if (!settings.includes('<Frame360EditorModal')) {
-  fail('360 editor is not mounted in SettingsScreen');
-}
 if (settings.includes('<PageFrameEditorModal')) {
   fail('old page frame editor is still mounted');
 }
-if (!settings.includes('frame360Templates')) {
-  fail('SettingsScreen does not persist frame360Templates');
+if (settings.includes('全局版面修改編輯')) {
+  fail('legacy global layout editor entry is still visible');
+}
+if (settings.includes('Page Layout / 卡片順序')) {
+  fail('legacy page layout editor controls are still visible');
 }
 
 const portfolio = fs.readFileSync('src/v3/screens/PortfolioScreen.tsx', 'utf8');
@@ -56,11 +56,32 @@ if (!portfolio.includes('<Frame360Runtime')) {
 if (!portfolio.includes("['portfolio:portfolio-list']")) {
   fail('PortfolioScreen does not use the shared holding template key');
 }
+if (!portfolio.includes('<Frame360EditorModal')) {
+  fail('PortfolioScreen does not mount the V5 360 editor');
+}
+if (!portfolio.includes('setEditingHoldingFrame(true)')) {
+  fail('holding long-press does not enter the V5 360 editor');
+}
+if (!portfolio.includes('onPreferencesChange?.({')) {
+  fail('PortfolioScreen does not persist frame360Templates');
+}
 
 const editor = fs.readFileSync(
   'src/v3/components/Frame360EditorModal.tsx',
   'utf8',
 );
+for (const token of [
+  "position: 'absolute'",
+  'handleCellLongPress',
+  'setDeepDialog(true)',
+  '即時預覽框',
+  'renderLockedGrid(true)',
+]) {
+  if (!editor.includes(token)) {
+    fail(`360 editor missing V5 interaction contract: ${token}`);
+  }
+}
+
 const bannedVisibleEnglish = [
   'PAGE FRAME',
   'Surface Registry',
