@@ -1,4 +1,4 @@
-name: V5.0.8 Continuous Verification
+name: V5.0.9 Continuous Verification
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   verify:
-    name: Verify V5.0.8 source
+    name: Verify V5.0.9 source
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -43,17 +43,21 @@ jobs:
       - name: Global 360 zero-legacy hard-gate
         run: npm run audit:360-core
 
-      - name: Verify V5.0.8 version chain
+      - name: Verify V5.0.9 version chain
         shell: bash
         run: |
           set -euo pipefail
-          grep -F '"version": "5.0.7"' package.json
-          grep -F '"version": "5.0.7"' app.json
-          grep -F '"runtimeVersion": "5.0.7"' app.json
-          grep -F "APP_SEMVER='5.0.7'" src/v3/version.ts
-          grep -F 'versionName "5.0.7"' android/app/build.gradle
-          grep -F 'ETF財務管家 V5.0.8 NATIVE' android/app/src/main/res/values/strings.xml
-          grep -F 'V5.0.8 360 Editor Stability Update：延續 V5.0.6 的 Settings 單一展開、各頁設定模式、重複 PageFrame 修正與完整背景／圖片編輯；補正圖片 fit 的 TypeScript 判別聯集縮窄，確保 strict typecheck 與 APK hard-gate 可通過。' README.md
+          grep -F '"version": "5.0.9"' package.json
+          grep -F '"version": "5.0.9"' app.json
+          grep -F '"runtimeVersion": "5.0.9"' app.json
+          grep -F "APP_SEMVER='5.0.9'" src/v3/version.ts
+          grep -F 'APP_BUILD=56' src/v3/version.ts
+          grep -F '"versionCode": 50009' app.json
+          grep -F 'versionCode 50009' android/app/build.gradle
+          grep -F '<string name="expo_runtime_version">5.0.9</string>' android/app/src/main/res/values/strings.xml
+          grep -F 'versionName "5.0.9"' android/app/build.gradle
+          grep -F 'ETF財務管家 V5.0.9 NATIVE' android/app/src/main/res/values/strings.xml
+          grep -F 'V5.0.9 CI Recovery Update：同步版本鏈至 5.0.9 / 50009 / build 56，修正 360 zero-legacy audit 被 migration 註解中的 Legacy 字樣誤觸發；保留既有 360 Canvas / Block 功能，不擴充 5.1.x 延後項目。' README.md
 
       - name: Source diff integrity
         run: git diff --check
